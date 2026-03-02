@@ -1,0 +1,60 @@
+const { body, validationResult } = require('express-validator');
+
+// Sign Up Validation
+const signUpValidation = [
+
+  body('username')
+    .trim()
+    .isLength({ min: 3, max: 20 })
+    .withMessage('Username must be between 3 and 20 characters'),
+
+  body('full_name')
+    .trim()
+    .notEmpty()
+    .withMessage('Full name is required')
+    .matches(/^[A-Za-z\s]+$/)
+    .withMessage("Full name must contain only letters and spaces"),
+
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Invalid email format'),
+
+  body('password')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters')
+    .matches(/\d/)
+    .withMessage('Password must contain a number')
+];
+
+// Sign In Validation
+const signInValidation = [
+  body('username')
+    .trim()
+    .isLength({ min: 3, max: 20 })
+    .withMessage('Username must be between 3 and 20 characters'),
+
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+];
+
+
+// Central validation handler
+const validater = async (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      errors: errors.array().map(err => err.msg)
+    });
+  }
+
+  next();
+};
+
+module.exports = {
+  signUpValidation,
+  signInValidation,
+  validater
+};
