@@ -6,7 +6,8 @@ const updateProfileValidation = [
     .optional()
     .trim()
     .isLength({ min: 3, max: 20 })
-    .withMessage('Username must be between 3 and 20 characters'),
+    .withMessage('Username must be between 3 and 20 characters')
+    .isAlpha(),
 
   body('email')
     .optional()
@@ -21,6 +22,7 @@ const updateProfileValidation = [
     .withMessage('Full name cannot be empty')
     .matches(/^[A-Za-z\s]+$/)
     .withMessage('Full name must contain only letters and spaces')
+    .isAlpha(),
 ];
 
 // Central validation handler

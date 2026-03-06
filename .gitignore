@@ -21,3 +21,6 @@ logs/
 pids/
 *.pid
 *.seed
+
+
+/src/generated

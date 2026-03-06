@@ -1,160 +1,155 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db.js');
 
+const prisma = require('./prisma.js');
 
-const authModel={
-    async signUp(userData){
-        try{
-            const{
+const authModel = {
+
+    async signUp(userData) {
+        const { username, full_name, email, password } = userData;
+
+        // Check if user exists
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username },
+                    { email }
+                ]
+            }
+        });
+
+        if (existingUser) {
+            throw new Error('Username or email already exists');
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Create user
+        const user = await prisma.user.create({
+            data: {
                 username,
                 email,
-                password
-            }=userData;
-
-            // Check if user exists
-            const existingUser = await db.query(
-                'SELECT user_id FROM users WHERE username = ? OR email = ?',
-                [username, email]
-            );
-
-            if (existingUser.rows.length > 0) {
-                throw new Error('Username or email already exists');
+                password_hash: passwordHash,
+                full_name,
+            },
+            select: {
+                user_id: true,
+                username: true,
+                email: true
             }
+        });
 
-            // Hash password
-            const passwordHash = await bcrypt.hash(password, 10);
-
-            // Create user
-            const userResult = await db.query(
-                'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?) RETURNING user_id, username, email',
-                [username, email, passwordHash]
-            );
-
-            const user = userResult.rows[0];
-
-            return user;
-        }catch(error){
-            throw error;
-        }
+        return user;
     },
 
     async signIn(credentials) {
-        try {
-            const { username, password } = credentials;
+        const { identifier, password } = credentials;
 
-            // Find user
-            const userResult = await db.query(
-                'SELECT user_id, username, password_hash FROM users WHERE username = ?',
-                [username]
-            );
+        //console.log(Object.keys(prisma));
 
-            if (userResult.rows.length === 0) {
-                throw new Error('Invalid credentials');
-            }
-
-            const user = userResult.rows[0];
-
-            // Verify password
-            const isValidPassword = await bcrypt.compare(password, user.password_hash);
-            if (!isValidPassword) {
-                throw new Error('Invalid Password');
-            }
-
-            // Generate JWT token
-            const token = jwt.sign(
-                { 
-                    user_id: user.user_id, 
-                    username: user.username 
-                },
-                process.env.JWT_SECRET || 'fallback_secret',
-                { expiresIn: '24h' }
-            );
-
-            return {
-                token,
-                user: {
-                    user_id: user.user_id,
-                    username: user.username,
-                }
-            };
-        } catch (error) {
-            throw error;
+        const user = await prisma.user.findFirst({
+            where: {
+            OR: [
+                { username: identifier },
+                { email: identifier }
+            ]
         }
+        });
+
+        if (!user) {
+            throw new Error('Invalid credentials');
+        }
+
+        const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
+        if (!isValidPassword) {
+            throw new Error('Invalid Password');
+        }
+
+        const token = jwt.sign(
+            {
+                user_id: user.user_id,
+                username: user.username
+            },
+            process.env.JWT_SECRET || 'fallback_secret',
+            { expiresIn: '24h' }
+        );
+
+        return {
+            token,
+            user: {
+                user_id: user.user_id,
+                username: user.username
+            }
+        };
     },
- 
+
     async getProfile(userId) {
-        try {
-            const userResult = await db.query(
-                'SELECT user_id, username, email FROM users WHERE user_id = ?',
-                [userId]
-            );
 
-            if (userResult.rows.length === 0) {
-                throw new Error('User not found');
+        const user = await prisma.user.findUnique({
+            where: { user_id: userId },
+            select: {
+                user_id: true,
+                username: true,
+                email: true
             }
+        });
 
-            return userResult.rows[0];
-        } catch (error) {
-            throw error;
+        if (!user) {
+            throw new Error('User not found');
         }
+
+        return user;
     },
 
     async detailed_profile(userId) {
-        try {
-            const userResult = await db.query(
-                //Implementing sub queries
-                `
-                SELECT 
-                u.user_id,
-                u.username,
-                u.full_name,
-                u.email,
-                u.created_at,
 
-                -- Total Budgets
-                (
-                    SELECT COUNT(*)
-                    FROM budgets b
-                    WHERE b.user_id = u.user_id
-                ) AS total_budgets,
+        const user = await prisma.user.findUnique({
+            where: { user_id: userId },
+            include: {
+                budgets: true,
+                expenses: true
+            }
+        });
 
-                -- Total Expenses
-                (
-                    SELECT COUNT(*)
-                    FROM expenses e
-                    WHERE e.user_id = u.user_id
-                ) AS total_expenses,
-
-                -- Total Money Spent
-                (
-                    SELECT COALESCE(SUM(e.amount),0)::float
-                    FROM expenses e
-                    WHERE e.user_id = u.user_id
-                ) AS total_spent
-
-                FROM users u
-                WHERE u.user_id = $1;                 
-                `,
-                [userId]
-            );
-
-            return userResult.rows[0];
-        } catch (error) {
-            throw error;
+        if (!user) {
+            throw new Error('User not found');
         }
+
+        const total_budgets = user.budgets.length;
+        const total_expenses = user.expenses.length;
+        const total_spent = user.expenses.reduce(
+            (sum, expense) => sum + Number(expense.amount),
+            0
+        );
+
+        return {
+            user_id: user.user_id,
+            username: user.username,
+            full_name: user.full_name,
+            email: user.email,
+            created_at: user.created_at,
+            total_budgets,
+            total_expenses,
+            total_spent
+        };
     },
 
     async updateProfile(userId, updates) {
-        const data = await db.query(
-             `UPDATE users
-              SET ${Object.keys(updates).map((k, i) => `${k}=$${i + 1}`).join(', ')}
-              WHERE user_id=$${Object.keys(updates).length + 1}
-              RETURNING user_id, username, email, full_name`,
-             [...Object.values(updates), userId]
-         );
 
-         return data.rows[0];
+        const user = await prisma.user.update({
+            where: { user_id: userId },
+            data: updates,
+            select: {
+                user_id: true,
+                username: true,
+                email: true,
+                full_name: true
+            }
+        });
+
+        return user;
     }
 };
 

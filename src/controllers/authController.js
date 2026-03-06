@@ -26,14 +26,14 @@ const authController = {
 
     async userSignIn(req, res, next) {
         try {
-            const { username, password } = req.body;
+            const { identifier, password } = req.body;
 
             /* Validate required fields
-            if (!username || !password) {
-                return next(new Error('Username and password are required'));
+            if (!identifier || !password) {
+                return next(new Error('Username or email and password are required'));
             }*/
 
-            const result = await authModel.signIn({ username, password });
+            const result = await authModel.signIn({ identifier, password });
             res.json({
                 message: 'Login successful',
                 ...result

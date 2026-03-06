@@ -5,15 +5,19 @@ const signUpValidation = [
 
   body('username')
     .trim()
+    .notEmpty()
+    .withMessage('Username is required')
     .isLength({ min: 3, max: 20 })
-    .withMessage('Username must be between 3 and 20 characters'),
+    .withMessage('Username must be between 3 and 20 characters')
+    .matches(/^[a-zA-Z0-9_]+$/),
 
   body('full_name')
     .trim()
     .notEmpty()
     .withMessage('Full name is required')
     .matches(/^[A-Za-z\s]+$/)
-    .withMessage("Full name must contain only letters and spaces"),
+    .withMessage("Full name must contain only letters and spaces")
+    .isAlpha(),
 
   body('email')
     .trim()
@@ -29,10 +33,20 @@ const signUpValidation = [
 
 // Sign In Validation
 const signInValidation = [
-  body('username')
+  body('identifier')
     .trim()
-    .isLength({ min: 3, max: 20 })
-    .withMessage('Username must be between 3 and 20 characters'),
+    .notEmpty()
+    .withMessage('Username or email is required')
+    .custom((value) => {
+      const isEmail = /\S+@\S+\.\S+/.test(value);
+      const isUsername = /^[a-zA-Z0-9_]{3,20}$/.test(value);
+
+      if (!isEmail && !isUsername) {
+        throw new Error('Must be a valid username or email');
+      }
+
+      return true;
+    }),
 
   body('password')
     .notEmpty()
