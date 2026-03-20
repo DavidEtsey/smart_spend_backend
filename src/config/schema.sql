@@ -38,8 +38,21 @@ CREATE TABLE IF NOT EXISTS budgets (
 );
 `;
 
+const incomeTable=`
+CREATE TABLE IF NOT EXISTS income (
+    income_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    amount NUMERIC(10,2) NOT NULL,
+    source VARCHAR(50), -- salary, gift, business etc
+    method VARCHAR(50), -- cash, mobile_money, bank_transfer
+    description TEXT,
+    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+`;
+
 module.exports = {
     userTable,
     expenseTable,
     budgetTable,
+    incomeTable
 };  

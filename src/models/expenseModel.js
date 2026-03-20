@@ -1,62 +1,62 @@
-const db = require('../config/db');
+const prisma = require('./prisma.js');
 
+// CREATE
 const createExpense = async (expense) => {
   const { user_id, amount, description, category } = expense;
 
-  const result = await db.query(
-    `INSERT INTO expenses (user_id, amount, description,category)
-     VALUES ($1, $2, $3, $4)
-     RETURNING *`,
-    [user_id, amount, description, category]
-  );
-
-  return result.rows[0];
+  return await prisma.expense.create({
+    data: {
+      user_id,
+      amount,
+      description,
+      category
+    }
+  });
 };
 
+// GET BY USER
 const getExpensesByUser = async (user_id) => {
-  const result = await db.query(
-    'SELECT * FROM expenses WHERE user_id = $1 ORDER BY category DESC',
-    [user_id]
-  );
-
-  return result.rows;
+  return await prisma.expense.findMany({
+    where: { user_id:Number(user_id) },
+    orderBy: {
+      category: 'desc'
+    }
+  });
 };
 
+//UPDATE
 const updateExpense = async (expense_id, user_id, updates) => {
-  
-  const keys = Object.keys(updates);      // ['amount','category']  
-  const values = Object.values(updates);  // [100,'Food']
-  
-  const setClause = keys
-  .map((k, i) => `${k}=$${i + 1}`)
-  .join(', '); // "amount=$1, category=$2"
-  
-  const query=
-    `UPDATE expenses
-     SET ${setClause}
-     WHERE expense_id=$${keys.length + 1} AND user_id=$${keys.length + 2}
-     RETURNING *`;
+  await prisma.expense.updateMany({
+    where: { expense_id, user_id },
+    data: updates
+  });
 
-  const result = await db.query(query, [
-    ...values,
-    expense_id,
-    user_id]);
-
-  return result.rows[0];
+  return await prisma.expense.findFirst({
+    where: { expense_id, user_id }
+  });
 };
 
+//DEL 
 const deleteExpense = async (expense_id, user_id) => {
-  const result = await db.query(
-    'DELETE FROM expenses WHERE expense_id=$1 AND user_id=$2 RETURNING *',
-    [expense_id, user_id]
-  );
+  const existing = await prisma.expense.findFirst({
+    where: { expense_id, user_id }
+  });
 
-  return result.rows[0];
+  if (!existing) return null;
+
+  await prisma.expense.delete({
+    where: { expense_id }
+  });
+
+  return existing;
 };
-
+// GET ALL
 const getAllExpenses = async () => {
-    const result = await db.query('SELECT * FROM expenses ORDER BY category DESC'); 
-    return result.rows;
+  return await prisma.expense.findMany({
+    orderBy: {
+      category: 'desc'
+    }
+  });
 };
 
 module.exports = {

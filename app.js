@@ -7,6 +7,7 @@ const cors = require('cors');
 const authRouter=require('./src/routes/authRouter.js');
 const expenseRouter=require('./src/routes/expenseRouter.js');
 const budgetRouter = require('./src/routes/budgetRouter.js');
+const incomeRouter = require('./src/routes/incomeRouter.js');
 
 const { apiLimiter } = require('./src/middleware/rateLimiter.js');
 
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use('/api/user',authRouter);
 app.use('/api/expenses',expenseRouter);
 app.use('/api/budgets', budgetRouter);
+app.use('/api/income', incomeRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

@@ -9,15 +9,15 @@ const signUpValidation = [
     .withMessage('Username is required')
     .isLength({ min: 3, max: 20 })
     .withMessage('Username must be between 3 and 20 characters')
-    .matches(/^[a-zA-Z0-9_]+$/),
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
 
   body('full_name')
     .trim()
     .notEmpty()
     .withMessage('Full name is required')
     .matches(/^[A-Za-z\s]+$/)
-    .withMessage("Full name must contain only letters and spaces")
-    .isAlpha(),
+    .withMessage("Full name must contain only letters and spaces"),
 
   body('email')
     .trim()

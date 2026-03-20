@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const generateToken = require('../utils/generateToken.js')
 
 const prisma = require('./prisma.js');
 
@@ -67,14 +67,9 @@ const authModel = {
             throw new Error('Invalid Password');
         }
 
-        const token = jwt.sign(
-            {
-                user_id: user.user_id,
-                username: user.username
-            },
-            process.env.JWT_SECRET || 'fallback_secret',
-            { expiresIn: '24h' }
-        );
+        const token = generateToken({
+            user_id: user.user_id,
+        });
 
         return {
             token,

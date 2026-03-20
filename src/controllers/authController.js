@@ -96,7 +96,7 @@ const authController = {
                 req.user.user_id,
                 updates
             );
-            console.log("Profile from model:", data);
+            //console.log("Profile from model:", data);
 
             if (!data) {
                 return res.status(404).json({ message: 'Profile not found' });

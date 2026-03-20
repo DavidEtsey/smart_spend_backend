@@ -6,6 +6,7 @@ const {
     userTable,
     expenseTable,
     budgetTable,
+    incomeTable
 } = require('../src/config/schema.sql');
 
 async function createTables() {
@@ -25,6 +26,9 @@ async function createTables() {
 
         await db.query(budgetTable);
         console.log('✓ Budget table created successfully');
+
+        await db.query(incomeTable);
+        console.log('✓ Income table created successfully');
 
         await db.query(`
             ALTER TABLE users

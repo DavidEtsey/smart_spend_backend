@@ -3,9 +3,9 @@ const budgetModel = require('../models/budgetModel.js');
 const budgetController = {
     async createBudget(req, res, next) {
         try {
-            const { category, amount_limit, period, start_date, end_date} = req.body;
+            const { category, amount_limit, period, start_date, end_date } = req.body;
 
-            // 1. Check required fields
+            // 1. Check required fields 
               if (!category || !amount_limit || !start_date || !end_date) {
                 return res.status(400).json({ message: "All fields are required" });
               }
@@ -14,6 +14,7 @@ const budgetController = {
               if (isNaN(amount_limit) || amount_limit <= 0) {
                 return res.status(400).json({ message: "Amount must be a greater than 0" });
               }
+              //console.log(typeof(amount_limit))
             
               // 3. Validate date format
               const start = new Date(start_date);
@@ -50,9 +51,8 @@ const budgetController = {
     async getBudget(req, res, next) {
         try{
             const budgets = await budgetModel.getBudgetsWithSpent(req.user.user_id);
-            console.log(budgets);
+            //console.log(budgets);
 
-            
             const formatted = budgets.map(b => {
                 console.log({
                     limit: b.amount_limit,
@@ -93,7 +93,7 @@ const budgetController = {
     async updateBudget (req,res,next) {
         const allowed = ['category', 'amount_limit', 'period', 'start_date', 'end_date' ];
 
-        // ONLY the fields user actually altered
+        // ONLY the fields user can actually alter
         const updates = Object.fromEntries(
             Object.entries(req.body).filter(([k,v]) =>
                 allowed.includes(k) && v != null)
@@ -128,17 +128,17 @@ const budgetController = {
     async deleteBudget (req,res,next){
         try{
             const deleted = await budgetModel.deleteBudget(
-            req.params.budget_id,
-            req.user.user_id
-        );
+                req.params.budget_id,
+                req.user.user_id
+            );
 
-        if (!deleted) {
-            return res.status(404).json({ message: 'Budget not found' });
-        }
+            if (!deleted) {
+                return res.status(404).json({ message: 'Budget not found' });
+            }
 
-        res.json({
-        message: 'Budget deleted successfully'
-        });
+            res.json({
+            message: 'Budget deleted successfully'
+            });
 
         }catch(error){
             console.error('Error in deleteBudget:', error);
