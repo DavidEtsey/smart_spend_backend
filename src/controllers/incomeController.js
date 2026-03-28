@@ -70,11 +70,11 @@ const incomeController ={
                 source: i.source,
                 amount:i.amount,
                 method:i.method,
-                description:i.description
+                //description:i.description
             }))
 
             res.json({
-                total: incomes.length,
+                total: "Incomes recorded :"+incomes.length,
                 safeData
             });
 

@@ -1,9 +1,11 @@
+const { use } = require('react');
 const prisma = require('./prisma.js');
 
 // CREATE
 const createExpense = async (expense) => {
-  const { user_id, amount, description, category } = expense;
 
+  const { user_id, amount, description, category } = expense;
+  
   return await prisma.expense.create({
     data: {
       user_id,
@@ -16,6 +18,7 @@ const createExpense = async (expense) => {
 
 // GET BY USER
 const getExpensesByUser = async (user_id) => {
+  
   return await prisma.expense.findMany({
     where: { user_id:Number(user_id) },
     orderBy: {
@@ -50,6 +53,7 @@ const deleteExpense = async (expense_id, user_id) => {
 
   return existing;
 };
+
 // GET ALL
 const getAllExpenses = async () => {
   return await prisma.expense.findMany({

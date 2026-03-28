@@ -7,7 +7,7 @@ const {getAllExpenses} = require('../controllers/expenseController.js');
 expenseRouter.use(authMiddleware);
 
 expenseRouter.post('/create', expenseController.createExpense);
-expenseRouter.get('/read/:user_id', expenseController.getExpensesByUser);
+expenseRouter.get('/read', expenseController.getExpensesByUser);
 expenseRouter.post('/update/:expense_id', expenseController.updateExpense);
 expenseRouter.delete('/delete/:expense_id', expenseController.deleteExpense);
 

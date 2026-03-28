@@ -54,7 +54,12 @@ const authModel = {
                 { username: identifier },
                 { email: identifier }
             ]
-        }
+            },
+            select:{
+                user_id: true,
+                username: true,
+                password_hash: true
+            }
         });
 
         if (!user) {
@@ -104,7 +109,8 @@ const authModel = {
             where: { user_id: userId },
             include: {
                 budgets: true,
-                expenses: true
+                expenses: true,
+                income:true
             }
         });
 
@@ -114,6 +120,7 @@ const authModel = {
 
         const total_budgets = user.budgets.length;
         const total_expenses = user.expenses.length;
+        const total_income = user.income.length;
         const total_spent = user.expenses.reduce(
             (sum, expense) => sum + Number(expense.amount),
             0
@@ -127,6 +134,7 @@ const authModel = {
             created_at: user.created_at,
             total_budgets,
             total_expenses,
+            total_income,
             total_spent
         };
     },

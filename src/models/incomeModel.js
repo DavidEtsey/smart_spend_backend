@@ -18,6 +18,7 @@ const incomeModel ={
     async getUserIncome(user_id) {
         return prisma.income.findMany({
             where: { user_id: user_id },
+            select:{source:true,amount:true,method:true},
             orderBy: { received_at: "desc" }
         });
     },

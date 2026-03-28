@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS budgets (
     user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
     category VARCHAR(100) NOT NULL,
     amount_limit NUMERIC(10,2) NOT NULL,
-    period VARCHAR(20) DEFAULT 'monthly',
+    period INTEGER CHECK (period > 0), -- duration in months
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

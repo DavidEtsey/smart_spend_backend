@@ -4,6 +4,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const pool = require('./src/config/db.js');
 const cors = require('cors');
+const logger = require("./src/middleware/loggerMiddleware.js");
 const authRouter=require('./src/routes/authRouter.js');
 const expenseRouter=require('./src/routes/expenseRouter.js');
 const budgetRouter = require('./src/routes/budgetRouter.js');
@@ -18,6 +19,7 @@ app.use(cors());
 
 // Middleware to parse JSON
 app.use(express.json());
+app.use(logger);
 
 //Routes imported
 app.use('/api/user',authRouter);

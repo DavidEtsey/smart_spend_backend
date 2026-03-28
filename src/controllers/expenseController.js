@@ -10,6 +10,8 @@ const expenseController = {
                 category: req.body.category,
             };
 
+            //console.log("req.user:", req.user);
+
             const newExpense = await expenseModel.createExpense(expense);                          
             res.status(201).json({
                 message: 'New expenses successfully',
@@ -22,11 +24,9 @@ const expenseController = {
     },
 
     async getExpensesByUser(req, res, next) {
-        const id={
-            user_id:req.params.user_id
-        };
+        
         try {
-            const expenses = await expenseModel.getExpensesByUser(id.user_id);
+            const expenses = await expenseModel.getExpensesByUser(req.user.user_id);
             res.json({
                 message: 'Expenses retrieved successfully',
                 data: expenses
@@ -77,8 +77,8 @@ const expenseController = {
     async deleteExpense(req, res, next) {
         try {
             const deleted = await expenseModel.deleteExpense(
-                req.params.expense_id,
-                req.user.user_id
+                Number(req.params.expense_id),
+                Number(req.user.user_id)
             );
             if (!deleted) {
                 return res.status(404).json({ error: 'Expense not deleted' });

@@ -27,12 +27,7 @@ const authController = {
     async userSignIn(req, res, next) {
         try {
             const { identifier, password } = req.body;
-
-            /* Validate required fields
-            if (!identifier || !password) {
-                return next(new Error('Username or email and password are required'));
-            }*/
-
+            
             const result = await authModel.signIn({ identifier, password });
             res.json({
                 message: 'Login successful',
@@ -61,12 +56,13 @@ const authController = {
             const userId = req.user.user_id; 
 
             const profile = await authModel.detailed_profile(userId);
+
             if (!profile) {
-            return res.status(404).json({
-                message: "Profile not found"
-            });
+                return res.status(404).json({
+                    message: "Profile not found"
+                });
             }
-            console.log("Profile from model:", profile);
+            //console.log("Profile from model:", profile);
 
             res.json({
                 message: 'Detailed profile retrieved successfully',
