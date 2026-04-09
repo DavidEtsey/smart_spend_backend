@@ -14,14 +14,26 @@ CREATE TABLE IF NOT EXISTS users (
 );
 `;
 
+const categoryTable=`
+CREATE TABLE categories (
+    category_id SERIAL PRIMARY KEY ,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    icon VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, name)
+);
+`;
+
 const expenseTable = `
 CREATE TABLE IF NOT EXISTS expenses (
     expense_id SERIAL PRIMARY KEY ,
     user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
     amount DECIMAL(10, 2) NOT NULL,
     description TEXT NOT NULL,
-    category VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 `;
 
@@ -29,9 +41,9 @@ const budgetTable=`
 CREATE TABLE IF NOT EXISTS budgets (
     budget_id SERIAL PRIMARY KEY ,
     user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-    category VARCHAR(100) NOT NULL,
+    category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
     amount_limit NUMERIC(10,2) NOT NULL,
-    period INTEGER CHECK (period > 0), -- duration in months
+    period INTEGER CHECK (period > 0 && period <= 12), -- duration in months
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -54,5 +66,7 @@ module.exports = {
     userTable,
     expenseTable,
     budgetTable,
-    incomeTable
+    incomeTable,
+    categoryTable
 };  
+

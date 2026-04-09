@@ -12,7 +12,8 @@ const expenseController = {
 
             //console.log("req.user:", req.user);
 
-            const newExpense = await expenseModel.createExpense(expense);                          
+            const newExpense = await expenseModel.createExpense(expense);    
+                                  
             res.status(201).json({
                 message: 'New expenses successfully',
                 newExpense

@@ -1,5 +1,5 @@
 const prisma = require('./prisma.js');
-const { addMonths, diffInMonths } = require('../utils/date.js');
+const { addMonths, diffInMonths } = require('../utils/dateCalc.js');
 
   
 const normalizeBudgetInput = ( start_date, end_date, period ) => {
@@ -54,7 +54,6 @@ const createBudget = async ({ user_id, category, amount_limit, period, start_dat
       period: true,
       created_at:false}
   });
-
   return result;
 };
 

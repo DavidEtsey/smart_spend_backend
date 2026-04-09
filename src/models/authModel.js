@@ -153,6 +153,30 @@ const authModel = {
         });
 
         return user;
+    },
+
+    async changePassword(password,newPassword,user_id) {
+        // 1. Get user
+        const user = await prisma.user.findUnique({ 
+            where: { user_id: user_id }, 
+            select:{password_hash: true }
+        });
+        if (!user) throw new Error("User not found");
+
+        // 2. Check current password
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) throw new Error("Current password is incorrect");
+
+        // 3. Hash new password
+        const newHash = await bcrypt.hash(newPassword, 10);
+
+        // 4. Update password
+        await prisma.user.update({
+            where: { user_id: user_id },
+            data: { password_hash: newHash },
+        });
+
+        return { message: "Password changed successfully" };
     }
 };
 

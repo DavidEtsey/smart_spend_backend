@@ -107,6 +107,26 @@ const authController = {
             console.error('Error in update_profile:', error);
             next(error);
         }
+    },
+
+    async changePassword(req,res,next){
+        try {
+            const {password,newPassword}=req.body;
+            const {user_id} = req.user; 
+
+            const results=await authModel.changePassword(password,newPassword,user_id);
+
+            if (!results) {
+                return res.status(404).json({ message: 'Password not change' });
+            }
+
+            res.json({
+                message: 'Password changed successfully',
+            })
+        } catch (error) {
+            console.error('Error in changePassword:', error);
+            next(error);
+        }
     }
 };
 

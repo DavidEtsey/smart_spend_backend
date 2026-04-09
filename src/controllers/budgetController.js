@@ -1,5 +1,6 @@
 const budgetModel = require('../models/budgetModel.js');
 
+
 const budgetController = {
     async createBudget(req, res, next) {
         try {
@@ -48,6 +49,8 @@ const budgetController = {
                 start_date,
                 end_date,
             });
+
+            
 
             res.status(201).json({
             message: 'Budget created successfully',

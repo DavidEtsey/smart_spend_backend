@@ -6,7 +6,8 @@ const {
     userTable,
     expenseTable,
     budgetTable,
-    incomeTable
+    incomeTable,
+    categoryTable
 } = require('../src/config/schema.sql');
 
 async function createTables() {
@@ -20,6 +21,9 @@ async function createTables() {
         
         await db.query(userTable);
         console.log('✓ Users table created successfully');
+
+        await db.query(categoryTable);
+        console.log('✓ Catgory table created successfully');
 
         await db.query(expenseTable);
         console.log('✓ Expenses table created successfully');
@@ -41,6 +45,11 @@ async function createTables() {
             ADD COLUMN IF NOT EXISTS full_name TEXT
         `);
         console.log('  ↳ Full name column ensured on users table');
+
+        await db.query(`
+            CREATE INDEX IF NOT EXISTS idx_user_id ON users(user_id)
+        `);
+        console.log('User_id index ensured on users table');
 
         /*await db.query(`
             CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)

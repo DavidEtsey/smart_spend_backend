@@ -8,7 +8,7 @@ expenseRouter.use(authMiddleware);
 
 expenseRouter.post('/create', expenseController.createExpense);
 expenseRouter.get('/read', expenseController.getExpensesByUser);
-expenseRouter.post('/update/:expense_id', expenseController.updateExpense);
+expenseRouter.put('/update/:expense_id', expenseController.updateExpense);
 expenseRouter.delete('/delete/:expense_id', expenseController.deleteExpense);
 
 expenseRouter.get('/read_all', getAllExpenses);
