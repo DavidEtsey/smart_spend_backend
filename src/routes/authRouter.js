@@ -20,4 +20,8 @@ authRouter.put('/update_profile', verifyToken, updateProfileValidation, validate
 //Password Related routes
 authRouter.put('/passwordChange',verifyToken,authController.changePassword);
 
+//Password Reset routes
+authRouter.post('/forgotPassword', authController.forgotPassword);
+authRouter.post('/resetPassword', authController.resetPassword);
+        
 module.exports = authRouter; 

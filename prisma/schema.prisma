@@ -9,66 +9,105 @@ datasource db {
 }
 
 model User {
-  user_id       Int          @id @default(autoincrement())
-  username      String       @unique @db.VarChar(100)
-  email         String       @unique @db.VarChar(100)
+  user_id       Int       @id @default(autoincrement())
+  username      String    @unique @db.VarChar(100)
+  email         String    @unique @db.VarChar(100)
   password_hash String
-  created_at    DateTime?    @default(now()) @db.Timestamp(6)
-  full_name     String?      @db.VarChar(225)
-  budgets       Budget[]
-  categories    categories[]
-  expenses      Expense[]
-  income        income[]
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  full_name     String?   @db.VarChar(225)
+
+  budgets                 Budget[]
+  categories              Categories[] // user-created categories
+  expenses                Expense[]
+  income                  Income[]
+  userCategoryPreferences UserCategoryPreference[]
+
+  // Forgot password fields
+  reset_code          String?
+  reset_code_expires  DateTime?
+
 
   @@map("users")
 }
 
 model Expense {
   expense_id  Int       @id @default(autoincrement())
-  user_id     Int?
+  user_id     Int
   amount      Decimal   @db.Decimal(10, 2)
   description String
-  category    String?   @db.VarChar(100)
+  category_id Int
   created_at  DateTime? @default(now()) @db.Timestamp(6)
-  user        User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
+  user     User        @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  category Categories? @relation(fields: [category_id], references: [category_id])
+
+  @@index([user_id])
+  @@index([category_id])
   @@map("expenses")
 }
 
 model Budget {
   budget_id    Int       @id @default(autoincrement())
-  user_id      Int?
-  category     String    @db.VarChar(100)
+  user_id      Int
+  category_id  Int
   amount_limit Decimal   @db.Decimal(10, 2)
   start_date   DateTime  @db.Date
   end_date     DateTime  @db.Date
   created_at   DateTime? @default(now()) @db.Timestamp(6)
   period       Int?
-  user         User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
+  user     User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  category Categories @relation(fields: [category_id], references: [category_id])
+
+  @@index([user_id])
+  @@index([category_id])
   @@map("budgets")
 }
 
-model income {
-  income_id   Int       @id @default(autoincrement())
-  user_id     Int?
-  amount      Decimal   @db.Decimal(10, 2)
-  source      String?   @db.VarChar(50)
-  method      String?   @db.VarChar(50)
-  description String?
-  received_at DateTime? @default(now()) @db.Timestamp(6)
-  users       User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+model Income {
+  income_id   Int      @id @default(autoincrement())
+  user_id     Int
+  amount      Decimal  @db.Decimal(10, 2)
+  source      String   @db.VarChar(50)
+  method      String   @db.VarChar(50)
+  description String
+  received_at DateTime @default(now()) @db.Timestamp(6)
 
+  users User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id])
   @@map("income")
 }
 
-model categories {
-  category_id Int       @id @default(autoincrement())
-  user_id     Int?
-  name        String    @db.VarChar(100)
-  icon        String?   @db.VarChar(100)
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  users       User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+model Categories {
+  category_id Int      @id @default(autoincrement())
+  user_id     Int // NULL = global category
+  name        String   @db.VarChar(100)
+  icon        String?  @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
 
-  @@unique([user_id, name])
+  users User @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  expenses                Expense[]
+  budgets                 Budget[]
+  userCategoryPreferences UserCategoryPreference[]
+
+  @@unique([user_id, name]) // prevents duplicate per user or global
+  @@index([user_id])
+  @@map("categories")
+}
+
+model UserCategoryPreference {
+  user_id     Int
+  category_id Int
+
+  hidden      Boolean @default(false) // user hides this category
+  custom_name String
+
+  user     User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  category Categories @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+
+  @@id([user_id, category_id]) //composite primary key
+  @@index([user_id])
+  @@map("user_category_preferences")
 }

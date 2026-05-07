@@ -1,5 +1,6 @@
 const authModel = require('../models/authModel.js');
 
+
 const authController = {
     async userSignUp(req, res, next) {
         try {
@@ -127,7 +128,36 @@ const authController = {
             console.error('Error in changePassword:', error);
             next(error);
         }
+    },
+
+    async forgotPassword(req,res,next){
+        try {
+            const { email } = req.body; 
+
+            const result = await authModel.forgotPassword(email);
+
+            res.status(201).json({ message: "If that email exists, a reset code has been sent." });
+
+        } catch (error) {
+            console.error('Error in forgotPassword:', error);
+            next(error);
+        }
+    },
+
+    async resetPassword(req,res,next){
+        try {
+            const { email, reset_code, new_password } = req.body;
+
+            await authModel.resetPassword(email, reset_code, new_password);
+
+            res.json({ message: "Password reset successfully." });
+
+        } catch (error) {
+            console.error('Error in resetPassword:', error);
+            next(error);
+        }
     }
+
 };
 
 module.exports = authController;

@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const { sendEmail } =require('../utils/sendEmail.js');
 const generateToken = require('../utils/generateToken.js')
 
 const prisma = require('./prisma.js');
@@ -177,6 +178,75 @@ const authModel = {
         });
 
         return { message: "Password changed successfully" };
+    },
+
+    async forgotPassword(email) {
+
+        // 1. Find user by email
+        const user = await prisma.user.findUnique({ 
+            where: { email: email }, 
+        });
+        
+        // Always return same message (security)
+        if (!user) {
+            return { message: "If that email exists, a reset code has been sent." };
+        }
+
+        // Generate code (6 digits)
+        const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Expiry (10 minutes)
+        const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+        await prisma.user.update({
+            where: { email },
+            data: {
+                reset_code: resetToken,
+                reset_code_expires: expiry,
+            },
+        });
+
+        // Send email
+        await sendEmail(
+        email,
+        "Password Reset Code",
+        `Your password reset code is: ${resetToken}\n\nThis code expires in 10 minutes.`
+        );
+        
+    },
+
+    async resetPassword(email, reset_code, new_password) {
+
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!user || !user.reset_code || !user.reset_code_expires) {
+        return { message: "Invalid or expired code" };
+        }
+
+        // Check token match
+        if (user.reset_code !== reset_code) {
+            return { message: "Invalid code" };
+        }
+
+        // Check expiry
+        if (new Date() > user.reset_code_expires) {
+            return { message: "Code expired" };
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(new_password, 10);
+
+        await prisma.user.update({
+            where: { email },
+            data: {
+                password_hash: hashedPassword,
+                reset_code: null,
+                reset_code_expires: null,
+            },
+        });
+
     }
 };
 
