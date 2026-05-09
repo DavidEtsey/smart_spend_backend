@@ -20,7 +20,6 @@ model User {
   categories              Categories[] // user-created categories
   expenses                Expense[]
   income                  Income[]
-  userCategoryPreferences UserCategoryPreference[]
 
   // Forgot password fields
   reset_code          String?
@@ -81,33 +80,18 @@ model Income {
 
 model Categories {
   category_id Int      @id @default(autoincrement())
-  user_id     Int // NULL = global category
+  user_id     Int? // NULL = global category
   name        String   @db.VarChar(100)
   icon        String?  @db.VarChar(100)
   created_at  DateTime @default(now()) @db.Timestamp(6)
 
-  users User @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  users User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   expenses                Expense[]
   budgets                 Budget[]
-  userCategoryPreferences UserCategoryPreference[]
-
+  
   @@unique([user_id, name]) // prevents duplicate per user or global
   @@index([user_id])
   @@map("categories")
 }
 
-model UserCategoryPreference {
-  user_id     Int
-  category_id Int
-
-  hidden      Boolean @default(false) // user hides this category
-  custom_name String
-
-  user     User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  category Categories @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
-
-  @@id([user_id, category_id]) //composite primary key
-  @@index([user_id])
-  @@map("user_category_preferences")
-}

@@ -209,7 +209,7 @@ const authModel = {
         // Send email
         await sendEmail(
         email,
-        "Password Reset Code",
+        "SmartSpend Reset Code",
         `Your password reset code is: ${resetToken}\n\nThis code expires in 10 minutes.`
         );
         

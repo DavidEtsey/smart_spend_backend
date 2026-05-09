@@ -7,7 +7,7 @@ const expenseController = {
                 user_id: req.user.user_id,
                 amount: req.body.amount,
                 description: req.body.description,
-                category: req.body.category,
+                category_id: req.body.category_id,
             };
 
             //console.log("req.user:", req.user);

@@ -4,11 +4,11 @@ const budgetModel = require('../models/budgetModel.js');
 const budgetController = {
     async createBudget(req, res, next) {
         try {
-            const { category, amount_limit, period, start_date, end_date } = req.body;
+            const { category_id, amount_limit, period, start_date, end_date } = req.body;
 
             // 1. Required fields (flexible)
-            if (!category || !amount_limit || !start_date) {
-                return res.status(400).json({ message: "Category, amount, and start_date are required" });
+            if (!category_id || !amount_limit || !start_date) {
+                return res.status(400).json({ message: "Category ID, Amount, and Start_date are required" });
             }
         
             // Either (end_date OR period) must exist
@@ -43,7 +43,7 @@ const budgetController = {
 
             const budget = await budgetModel.createBudget({
                 user_id: req.user.user_id,
-                category,
+                category_id,
                 amount_limit,
                 period,
                 start_date,
@@ -89,7 +89,7 @@ const budgetController = {
 
                 return {
                     budget_id: b.budget_id,
-                    category: b.category,
+                    category_id: b.category_id,
                     amount_limit: b.amount_limit,
                     spent: b.spent,
                     remaining,

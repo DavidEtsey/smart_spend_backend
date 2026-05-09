@@ -8,10 +8,10 @@ const normalizeBudgetInput = ( start_date, end_date, period ) => {
   let end = end_date ? new Date(end_date) : null;
     
   // Case 1: start + period → compute end_date
-
   if (start && period && !end) {
     end = addMonths(start, period);
   }
+
   // Case 2: start + end → compute period
   if (start && end && !period) {
     period = diffInMonths(start, end);
@@ -31,13 +31,15 @@ const normalizeBudgetInput = ( start_date, end_date, period ) => {
 };
 
 
-const createBudget = async ({ user_id, category, amount_limit, period, start_date, end_date }) => {
+const createBudget = async ({ user_id, category_id, amount_limit, period, start_date, end_date }) => {
 
   const normalized = normalizeBudgetInput(start_date, end_date, period );
 
   const result = await prisma.budget.create({
     data: {
-      category,
+      category:{
+        connect: { category_id }
+      },
       amount_limit,
       start_date: normalized.start_date,
       end_date: normalized.end_date,
@@ -65,7 +67,7 @@ const getBudgetsWithSpent = async(user_id) => {
   });
 
   const expenses = await prisma.expense.groupBy({
-    by: ['category'],
+    by: ['category_id'],
     where: { user_id },
     _sum: {
         amount: true
@@ -75,11 +77,11 @@ const getBudgetsWithSpent = async(user_id) => {
   // Combine them by category
   const combined = budgets.map(budget => {
     // Find matching expense for the budget category
-    const expenseData = expenses.find(e => e.category === budget.category);
+    const expenseData = expenses.find(e => e.category_id === budget.category_id);
 
     return {
       id: budget.id,
-      category: budget.category,
+      category_id: budget.category_id,
       amount_limit: budget.amount_limit,
       spent: expenseData?._sum?.amount || 0, // total spent in this category
     };

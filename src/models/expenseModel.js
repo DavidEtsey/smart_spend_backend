@@ -4,18 +4,26 @@ const {checkBudgetAndGenerateAlert} = require('../utils/budgetAlert.js');
 // CREATE
 const createExpense = async (expense) => {
 
-  const { user_id, amount, description, category } = expense;
+  const { user_id, amount, description, category_id } = expense;
   
   const expData= await prisma.expense.create({
     data: {
-      user_id,
       amount,
       description,
-      category
+      user: {
+        connect: {
+          user_id: user_id,
+        },
+      },
+      category: {
+        connect: {
+          category_id: category_id
+        }
+      }
     },
     select:{
       user_id: true,
-      category: true,
+      category_id: true,
       created_at:true
     }
   });
@@ -33,7 +41,7 @@ const getExpensesByUser = async (user_id) => {
   return await prisma.expense.findMany({
     where: { user_id:Number(user_id) },
     orderBy: {
-      category: 'desc'
+      category_id: 'desc'
     }
   });
 };
@@ -80,7 +88,7 @@ const deleteExpense = async (expense_id, user_id) => {
 const getAllExpenses = async () => {
   return await prisma.expense.findMany({
     orderBy: {
-      category: 'desc'
+      category_id: 'desc'
     }
   });
 };
