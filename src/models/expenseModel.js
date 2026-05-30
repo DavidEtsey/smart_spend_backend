@@ -1,7 +1,7 @@
 const prisma = require('./prisma.js');
 const {checkBudgetAndGenerateAlert} = require('../utils/budgetAlert.js');
 
-// CREATE
+// CREATING AN EXPENSE
 const createExpense = async (expense) => {
 
   const { user_id, amount, description, category_id } = expense;

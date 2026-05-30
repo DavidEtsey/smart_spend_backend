@@ -47,8 +47,6 @@ const authModel = {
     async signIn(credentials) {
         const { identifier, password } = credentials;
 
-        //console.log(Object.keys(prisma));
-
         const user = await prisma.user.findFirst({
             where: {
             OR: [

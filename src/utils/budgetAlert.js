@@ -1,11 +1,11 @@
 const prisma = require('../models/prisma'); // adjust path if needed
 
-const checkBudgetAndGenerateAlert = async ({user_id, category, created_at}) => {
+const checkBudgetAndGenerateAlert = async ({user_id, category_id, created_at}) => {
   // Find matching budget
   const budget = await prisma.budget.findFirst({
     where: {
       user_id,
-      category,
+      category_id,
       start_date: { lte: new Date(created_at) },// lte meaning <= indicates  budget's starting date should be <= expense's created_at date
       end_date: { gte: new Date(created_at) }
     }
@@ -42,7 +42,7 @@ const checkBudgetAndGenerateAlert = async ({user_id, category, created_at}) => {
       limit: budget.amount_limit,
       percentage: Number(percentage.toFixed(2)) + "%",
       remaining,
-      message: `🚨 You exceeded your ${category} budget by ${spent - budget.amount_limit}`
+      message: `🚨 You exceeded your ${category.name} budget by ${spent - budget.amount_limit}`
     };
   }
 

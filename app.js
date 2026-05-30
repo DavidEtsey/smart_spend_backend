@@ -9,7 +9,8 @@ const authRouter=require('./src/routes/authRouter.js');
 const expenseRouter=require('./src/routes/expenseRouter.js');
 const budgetRouter = require('./src/routes/budgetRouter.js');
 const incomeRouter = require('./src/routes/incomeRouter.js');
-const categoryRouter = require('./src/routes/categoryRouter.js')
+const categoryRouter = require('./src/routes/categoryRouter.js');
+const transactionRouter = require('./src/routes/transactionRouter.js')
 
 const { apiLimiter } = require('./src/middleware/rateLimiter.js');
 
@@ -28,6 +29,7 @@ app.use('/api/expenses',expenseRouter);
 app.use('/api/budgets', budgetRouter);
 app.use('/api/income', incomeRouter);
 app.use('/api/category', categoryRouter);
+app.use('/api/transactions', transactionRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

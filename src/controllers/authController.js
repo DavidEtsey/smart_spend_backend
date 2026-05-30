@@ -1,18 +1,8 @@
 const authModel = require('../models/authModel.js');
-
-
 const authController = {
     async userSignUp(req, res, next) {
         try {
             const userData = req.body;
-
-            /* Validate required fields
-            const requiredFields = ['username', 'password', 'email'];
-            for (const field of requiredFields) {
-                if (!userData[field]) {
-                    return next(new Error(`${field} is required`));
-                }
-            }*/
 
             const user = await authModel.signUp(userData);
             res.status(201).json({
@@ -30,7 +20,7 @@ const authController = {
             const { identifier, password } = req.body;
             
             const result = await authModel.signIn({ identifier, password });
-            res.json({
+            res.status(201).json({
                 message: 'Login successful',
                 ...result
             });
@@ -45,7 +35,7 @@ const authController = {
             const userId = req.user.user_id; 
 
             const profile = await authModel.getProfile(userId);
-            res.json(profile);
+            res.status(200).json(profile);
         } catch (error) {
             console.error('Error in getProfile:', error);
             next(error);

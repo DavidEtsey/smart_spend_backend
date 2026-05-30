@@ -1,453 +1,412 @@
-# SmartSpend_Backend - Comprehensive Documentation
+# SmartSpend Backend Documentation
 
-## **1. PROJECT OVERVIEW**
+## 1. Overview
 
-**SmartSpend_Backend** is a full-featured personal finance management API built with Node.js/Express and PostgreSQL. It enables users to track expenses, manage budgets, record income, and receive intelligent budget alerts.
+SmartSpend_Backend is a Node.js Express API for personal finance management. It supports user authentication, expense tracking, budgeting, income records, category customization, and transaction history.
 
-**Key Characteristics:**
+**Tech Stack:**
 
-- RESTful API with JWT-based authentication
-- Role-based access control (per-user data isolation)
-- Real-time budget monitoring and alerts
-- Rate limiting and input validation
-- PostgreSQL database with Prisma ORM
+- Node.js with Express.js
+- PostgreSQL with Prisma ORM
+- JWT-based authentication
+- Express validators for request validation
+- Rate limiting and CORS enabled
 
----
+## 2. Architecture
 
-## **2. TECHNOLOGY STACK & DEPENDENCIES**
+The backend follows a layered structure:
 
-**Core Framework:**
+- `app.js` — Express app setup, middleware, routers, and database connection check.
+- `src/routes/` — API route definitions (6 routers).
+- `src/controllers/` — Request handling and response logic.
+- `src/models/` — Database access using Prisma ORM and raw SQL.
+- `src/middleware/` — Authentication, logging, and rate limiting.
+- `src/validations/` — Request validation rules.
+- `src/utils/` — Helpers for tokens, date logic, email, and budget alerts.
+- `src/config/` — PostgreSQL connection and schema utilities.
+- `prisma/` — Database schema definitions and migrations.
 
-- **Express.js** (4.16.1) - Web server and routing
-- **Node.js** with **Nodemon** (3.1.11) - Runtime and development auto-reload
+## 3. Key Dependencies
 
-**Database & ORM:**
+| Dependency           | Purpose                       |
+| -------------------- | ----------------------------- |
+| `express`            | Web framework                 |
+| `pg`                 | PostgreSQL client             |
+| `prisma`             | ORM                           |
+| `@prisma/client`     | Prisma client library         |
+| `@prisma/adapter-pg` | PostgreSQL adapter for Prisma |
+| `bcrypt`             | Password hashing              |
+| `jsonwebtoken`       | JWT authentication            |
+| `express-validator`  | Request validation            |
+| `express-rate-limit` | API rate limiting             |
+| `cors`               | CORS middleware               |
+| `morgan`             | HTTP request logging          |
+| `nodemailer`         | Email sending                 |
+| `dotenv`             | Environment variables         |
+| `uuid`               | Unique ID generation          |
 
-- **PostgreSQL** (pg 8.20.0) - Relational database
-- **Prisma** (7.4.2) - Modern ORM for type-safe database access
-- **@prisma/adapter-pg** - PostgreSQL adapter for Prisma
-- **@prisma/client** (7.4.2) - Auto-generated query client
+## 4. Entry Point — `app.js`
 
-**Security:**
+- Loads environment variables from `.env`
+- Configures Express middleware: CORS, JSON parser, logger, global rate limiter
+- Registers 6 routers:
+  - `/api/user` — Authentication and profile management
+  - `/api/expenses` — Expense CRUD operations
+  - `/api/budgets` — Budget management
+  - `/api/income` — Income tracking
+  - `/api/category` — Category management
+  - `/api/transactions` — Transaction history and analytics
+- Includes global error handler for uncaught exceptions
+- Verifies database connectivity via `src/config/db.js`
 
-- **bcrypt** (6.0.0) - Password hashing
-- **jsonwebtoken** (9.0.3) - JWT token generation and verification
-- **express-rate-limit** (8.2.1) - API rate limiting
-- **cors** (2.8.5) - Cross-Origin Resource Sharing
+## 5. Authentication
 
-**Validation & Utilities:**
+### JWT Authentication
 
-- **express-validator** (7.3.1) - Input validation and sanitization
-- **morgan** (1.9.1) - HTTP request logging
-- **cookie-parser** (1.4.4) - Cookie parsing
-- **dotenv** (17.2.3) - Environment variable management
-- **uuid** (13.0.0) - Unique identifier generation
-- **debug** - Debugging utility
+- Implemented in `src/middleware/authMiddleware.js`.
+- Verifies Bearer token from `Authorization` header.
+- Attaches decoded token payload to `req.user`.
+- Returns 401 for missing/invalid tokens.
 
----
+### Auth Routes
 
-## **3. DATABASE SCHEMA**
+Defined in `src/routes/authRouter.js`:
 
-The database consists of **4 core tables** with cascading relationships:
+- `POST /api/user/signUp` — Register new user.
+- `POST /api/user/signIn` — Login and receive JWT.
+- `GET /api/user/profile` — Get basic profile.
+- `GET /api/user/detailed_profile` — Get profile with aggregated stats.
+- `PUT /api/user/update_profile` — Update username/email/full_name.
+- `PUT /api/user/passwordChange` — Change password.
+- `POST /api/user/forgotPassword` — Generate password reset code.
+- `POST /api/user/resetPassword` — Reset password.
 
-**Users Table**
+## 6. Expense Management
 
-```
-- user_id (PK, auto-increment)
-- username (UNIQUE, VARCHAR 100)
-- email (UNIQUE, VARCHAR 100)
-- password_hash
-- full_name (VARCHAR 225, optional)
-- created_at (TIMESTAMP with default now())
-```
+### Routes (`src/routes/expenseRouter.js`)
 
-**Expenses Table**
+- `POST /api/expenses/create` — Add expense.
+- `GET /api/expenses/read` — Get user expenses.
+- `GET /api/expenses/read_all` — Get all expenses.
+- `PUT /api/expenses/update/:expense_id` — Update expense.
+- `DELETE /api/expenses/delete/:expense_id` — Delete expense.
 
-```
-- expense_id (PK, auto-increment)
-- user_id (FK → Users, onDelete: Cascade)
-- amount (DECIMAL 10,2)
-- description
-- category (VARCHAR 100, optional)
-- created_at (TIMESTAMP, default now())
-```
+### Controller / Model
 
-**Budgets Table**
+- `src/controllers/expenseController.js` handles request validation and response.
+- `src/models/expenseModel.js` uses Prisma for expense CRUD.
+- Expense creation and update trigger budget alert checks via `src/utils/budgetAlert.js`.
 
-```
-- budget_id (PK, auto-increment)
-- user_id (FK → Users, onDelete: Cascade)
-- category (VARCHAR 100)
-- amount_limit (DECIMAL 10,2)
-- period (INTEGER - duration in months)
-- start_date (DATE)
-- end_date (DATE)
-- created_at (TIMESTAMP, default now())
-```
+## 7. Budget Management
 
-**Income Table**
+### Routes (`src/routes/budgetRouter.js`)
 
-```
-- income_id (PK, auto-increment)
-- user_id (FK → Users, onDelete: Cascade)
-- amount (DECIMAL 10,2)
-- source (VARCHAR 50, optional)
-- method (VARCHAR 50 - enum: Cash, Mobile Money, Bank Transfer, Cheque)
-- description (optional)
-- received_at (TIMESTAMP, default now())
-```
+- `POST /api/budgets/create` — Create budget.
+- `GET /api/budgets/read` — Read budgets with spent progress.
+- `PUT /api/budgets/update/:budget_id` — Update budget.
+- `DELETE /api/budgets/delete/:budget_id` — Delete budget.
 
----
+### Controller / Model
 
-## **4. AUTHENTICATION SYSTEM**
+- `src/controllers/budgetController.js` manages request validation and budget formatting.
+- `src/models/budgetModel.js` normalizes dates and periods, calculates budget spend totals, and updates budgets.
+- Date math helpers live in `src/utils/dateCalc.js`.
 
-**JWT-Based Authentication:**
+## 8. Income Tracking
 
-- **Token Generation**: 24-hour expiration
-- **Token Storage**: Passed via Authorization header (`Bearer <token>`)
-- **Payload**: Contains `user_id` for request identification
+### Routes (`src/routes/incomeRouter.js`)
 
-**Authentication Flow:**
+- `POST /api/income/addIncome` — Record income.
+- `GET /api/income/readIncome` — Get user income entries.
+- `PUT /api/income/updateIncome/:income_id` — Update income.
+- `DELETE /api/income/deleteIncome/:income_id` — Delete income.
 
-1. User signs up with username, email, password, full_name
-2. Password hashed with bcrypt (salt rounds: 10)
-3. User signs in with username/email + password
-4. JWT token returned on successful authentication
-5. All protected routes require valid token in Authorization header
+### Model
 
-**Rate Limiting:**
+- `src/controllers/incomeController.js` validates and formats responses.
+- `src/models/incomeModel.js` uses Prisma for create/read and raw SQL for update/delete.
 
-- **Login attempts**: 5 per 2 minutes (strict limiter)
-- **General API**: 100 requests per 2 minutes
+## 9. Category Customization
 
----
+### Routes (`src/routes/categoryRouter.js`)
 
-## **5. API ENDPOINTS & ROUTES**
+- `POST /api/category/customCategory` — Create a custom category for a user
+- Categories can be global (user_id = NULL) or user-specific
+- Each category has optional icon support
 
-### **Authentication Routes** (`/api/user`)
+### Database
 
-| Method | Endpoint            | Authentication           | Purpose                         |
-| ------ | ------------------- | ------------------------ | ------------------------------- |
-| POST   | `/signUp`           | ❌ Public                | Register new user               |
-| POST   | `/signIn`           | ❌ Public (rate-limited) | Login user, return JWT          |
-| GET    | `/profile`          | ✅ Required              | Get basic profile info          |
-| GET    | `/detailed_profile` | ✅ Required              | Get full profile with stats     |
-| PUT    | `/update_profile`   | ✅ Required              | Update username/email/full_name |
+- Enforces unique constraint on `(user_id, name)` pairs to prevent duplicates
+- Used across expense and budget entities
 
-### **Expense Routes** (`/api/expenses`)
+## 10. Transaction Management
 
-| Method | Endpoint              | Authentication | Purpose                                    |
-| ------ | --------------------- | -------------- | ------------------------------------------ |
-| POST   | `/create`             | ✅ Required    | Create new expense (triggers budget check) |
-| GET    | `/read`               | ✅ Required    | Get user's expenses                        |
-| GET    | `/read_all`           | ✅ Required    | Get ALL expenses (admin access)            |
-| PUT    | `/update/:expense_id` | ✅ Required    | Update expense details                     |
-| DELETE | `/delete/:expense_id` | ✅ Required    | Delete expense                             |
+### Routes (`src/routes/transactionRouter.js`)
 
-**Budget Alert Integration:**
+- `GET /api/transactions/daily` — Get transactions for a specific date (default: today)
+  - Query params: `date` (YYYY-MM-DD format), `type` (filter by transaction type)
+  - Returns all expenses and income for the given date
+- `GET /api/transactions/monthly/:year?/:month?` — Get transactions for a specific month
+  - Path params: `year` (optional), `month` (optional, 1-12)
+  - Returns aggregated transaction data by category or date
 
-- When expense created/updated, system checks if it exceeds budget limits
-- Returns alert with status (warning at 80%, danger at 100%)
+### Controller / Model
 
-### **Budget Routes** (`/api/budgets`)
+- `src/controllers/transactionController.js` handles request parsing and response formatting
+- `src/models/transactionModel.js` queries combined expense and income data
+- Supports filtering by transaction type (expense/income)
+- Useful for dashboards, insights, and analytics
 
-| Method | Endpoint             | Authentication | Purpose                                   |
-| ------ | -------------------- | -------------- | ----------------------------------------- |
-| POST   | `/create`            | ✅ Required    | Create budget with category and limits    |
-| GET    | `/read`              | ✅ Required    | Get user's budgets with spending progress |
-| PUT    | `/update/:budget_id` | ✅ Required    | Update budget parameters                  |
-| DELETE | `/delete/:budget_id` | ✅ Required    | Delete budget                             |
+## 11. Validation
 
-**Budget Features:**
+### `src/validations/authValidation.js`
 
-- Flexible date specification (start_date + period OR start_date + end_date)
-- Automatic date normalization and calculation
-- Spending progress tracking (percentage & remaining amount)
-- Status indicators: Safe (<80%), Warning (80-99%), Danger (≥100%)
+- Sign-up validation for username, full name, email, and password.
+- Sign-in validation for identifier and password.
+- Validation results return 422 with error messages.
 
-### **Income Routes** (`/api/income`)
+### `src/validations/profileValidation.js`
 
-| Method | Endpoint                   | Authentication | Purpose                   |
-| ------ | -------------------------- | -------------- | ------------------------- |
-| POST   | `/addIncome`               | ✅ Required    | Record income             |
-| GET    | `/readIncome`              | ✅ Required    | Get user's income sources |
-| PUT    | `/updateIncome/:income_id` | ✅ Required    | Update income record      |
-| DELETE | `/deleteIncome/:income_id` | ✅ Required    | Delete income record      |
+- Optional validation rules for profile updates.
+- Ensures username, email, and full_name meet format constraints.
 
-**Income Validation:**
+## 12. Middleware
 
-- Amount: positive number, ≤ 100,000,000
-- Method: Must be one of (Cash, Mobile Money, Bank Transfer, Cheque)
-- Required: amount, method
+### Rate Limiting — `src/middleware/rateLimiter.js`
 
----
+- Login limiter: 5 attempts per 2 minutes.
+- API limiter: 100 requests per 2 minutes.
+- `apiLimiter` applies globally to all routes.
 
-## **6. CORE FEATURES & BUSINESS LOGIC**
+### Authentication — `src/middleware/authMiddleware.js`
 
-### **A. User Profile Management**
+- JWT verification from `Authorization: Bearer <token>` header
+- Attaches decoded user data to `req.user`
+- Returns 401 for missing/invalid tokens
 
-- **Basic Profile**: username, email, user_id
-- **Detailed Profile**: Includes aggregated metrics:
-  - Total budgets, expenses, income records
-  - Total spent amount
-  - Creation date
+### Request Logging — `src/middleware/loggerMiddleware.js`
 
-### **B. Expense Tracking**
+- Uses Morgan `dev` format for HTTP request logging.
 
-- Track expenses by category with descriptions
-- Automatic categorization support
-- Timestamp recording for time-based analysis
-- Linked to budget checking system
+## 13. Database Layer
 
-### **C. Budget Management**
+### Database Schema (`prisma/schema.prisma`)
 
-- Create category-specific spending limits
-- Flexible period definition (months or explicit dates)
-- Intelligent date calculation and normalization:
-  - If start + period provided → compute end_date
-  - If start + end provided → compute period
-  - If all three provided → validate consistency
-
-### **D. Smart Budget Alerts** ([src/utils/budgetAlert.js](src/utils/budgetAlert.js))
-
-**Alert System:**
+#### User Model
 
 ```
-Trigger: When expense is created or updated
-Logic: Check if expense date falls within matching budget period
-Alert Types:
-  - DANGER: ≥100% of budget spent
-  - WARNING: 80-99% of budget spent
-  - SAFE: <80% of budget spent
-  - NULL: No matching budget for category
+- user_id (PK): Auto-increment integer
+- username: Unique, up to 100 chars
+- email: Unique, up to 100 chars
+- password_hash: Hashed password
+- full_name: Optional, up to 225 chars
+- created_at: Auto-generated timestamp
+- reset_code: For password recovery (optional)
+- reset_code_expires: Expiration time for reset code
+- Relations: budgets, categories, expenses, income
 ```
 
-**Alert Payload:**
-
-```json
-{
-  "status": "warning|danger",
-  "spent": <total_amount>,
-  "limit": <budget_limit>,
-  "percentage": "XX.XX%",
-  "remaining": <amount_left>,
-  "message": "Alert message with emoji"
-}
-```
-
-### **E. Income Tracking**
-
-- Record income from various sources
-- Support multiple payment methods
-- Source and description fields for context
-- Received_at timestamp for tracking
-
----
-
-## **7. ARCHITECTURE & DESIGN PATTERNS**
-
-**MVC Pattern Implementation:**
+#### Expense Model
 
 ```
-controllers/ → Business logic layer
-  ├── authController.js (Auth & Profile)
-  ├── budgetController.js (Budget CRUD)
-  ├── expenseController.js (Expense CRUD)
-  └── incomeController.js (Income CRUD)
-
-models/ → Data access layer
-  ├── authModel.js (User queries)
-  ├── budgetModel.js (Budget queries + calculations)
-  ├── expenseModel.js (Expense queries + alerts)
-  └── incomeModel.js (Income queries)
-
-routes/ → API endpoint definitions
-  ├── authRouter.js
-  ├── budgetRouter.js
-  ├── expenseRouter.js
-  └── incomeRouter.js
-
-middleware/ → Request processing
-  ├── authMiddleware.js (JWT verification)
-  ├── rateLimiter.js (Request throttling)
-  └── loggerMiddleware.js (HTTP logging)
-
-validations/ → Input validation rules
-  ├── authValidation.js (SignUp/SignIn rules)
-  └── profileValidation.js (Profile update rules)
-
-utils/ → Utility functions
-  ├── generateToken.js (JWT creation)
-  ├── dateCalc.js (Date arithmetic)
-  └── budgetAlert.js (Alert generation)
-
-config/ → Configuration
-  └── db.js (Database pool setup)
+- expense_id (PK): Auto-increment integer
+- user_id (FK): Owner of expense
+- amount: Decimal (10,2)
+- description: Text
+- category_id (FK): Category reference
+- created_at: Auto-generated timestamp
+- Indexes: user_id, category_id
 ```
 
----
-
-## **8. MIDDLEWARE & VALIDATION**
-
-### **Authentication Middleware** ([src/middleware/authMiddleware.js](src/middleware/authMiddleware.js))
-
-- Extracts Bearer token from Authorization header
-- Verifies JWT signature and expiration
-- Attaches decoded `user` object to request
-- Returns 401 if token invalid/missing
-
-### **Rate Limiting** ([src/middleware/rateLimiter.js](src/middleware/rateLimiter.js))
-
-- **Login Limiter**: 5 attempts per 2 minutes
-- **API Limiter**: 100 requests per 2 minutes
-- Applied globally to all routes
-
-### **Request Logging** ([src/middleware/loggerMiddleware.js](src/middleware/loggerMiddleware.js))
-
-- Morgan logger in 'dev' format
-- Logs: HTTP method, URL, status code, response time
-
-### **Input Validation** (express-validator)
-
-**SignUp Validation:**
-
-- Username: 3-20 chars, alphanumeric + underscores
-- Full Name: Letters and spaces only
-- Email: Valid email format
-- Password: Min 8 chars, must contain number
-
-**SignIn Validation:**
-
-- Identifier: Valid username or email
-- Password: Required
-
-**Profile Update Validation:**
-
-- All fields optional
-- Same format rules as signup when provided
-
----
-
-## **9. UTILITY FUNCTIONS**
-
-### **Token Generation** ([src/utils/generateToken.js](src/utils/generateToken.js))
-
-```javascript
-- Creates JWT with payload
-- 24-hour expiration
-- Uses JWT_SECRET from environment
-```
-
-### **Date Calculations** ([src/utils/dateCalc.js](src/utils/dateCalc.js))
-
-```javascript
-- addMonths(date, months): Add months to date
-- diffInMonths(start, end): Calculate month difference
-- Used for budget period normalization
-```
-
----
-
-## **10. ERROR HANDLING**
-
-**Error Flow:**
-
-1. Controllers use try-catch blocks
-2. Errors passed to Express error middleware via `next(error)`
-3. Global error handler returns 500 with error message
-4. Validation errors return 422 with field-specific messages
-
-**HTTP Status Codes:**
-
-- 201: Created (POST success)
-- 400: Bad Request (validation failure)
-- 401: Unauthorized (missing/invalid token)
-- 404: Not Found
-- 422: Unprocessable Entity (validation errors)
-- 500: Server Error
-
----
-
-## **11. DATA ACCESS LAYER (Prisma Integration)**
-
-**Prisma Client Setup** ([src/models/prisma.js](src/models/prisma.js))
-
-- PostgreSQL adapter via `@prisma/adapter-pg`
-- Connection pooling with pg.Pool
-- Generated client at `/src/generated`
-
-**Key Queries:**
-
-- `findUnique/findMany`: Read operations with filtering
-- `create`: Insert with data validation
-- `update/updateMany`: Modify records
-- `delete`: Remove records
-- `groupBy`: Aggregate operations (expense totals by category)
-
----
-
-## **12. SERVER CONFIGURATION**
-
-**Entry Point** ([app.js](app.js))
-
-- Load environment variables via dotenv
-- Initialize Express app
-- Register routes with prefixes:
-  - `/api/user` → Auth routes
-  - `/api/expenses` → Expense routes
-  - `/api/budgets` → Budget routes
-  - `/api/income` → Income routes
-- Apply middleware: CORS, JSON parser, rate limiter, logger
-- Global error handler
-- Database connection verification on startup
-- Listen on PORT (default: 5000)
-
----
-
-## **13. DEPLOYMENT CONFIGURATION**
-
-**Environment Variables Required:**
+#### Budget Model
 
 ```
-DATABASE_URL=postgresql://user:password@host:port/database
-JWT_SECRET=<your-secret-key>
-PORT=5000 (optional)
-DB_USERNAME, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT (for fallback)
+- budget_id (PK): Auto-increment integer
+- user_id (FK): Owner of budget
+- category_id (FK): Category reference
+- amount_limit: Decimal (10,2)
+- start_date: Date
+- end_date: Date
+- period: Optional period indicator
+- created_at: Auto-generated timestamp
+- Indexes: user_id, category_id
 ```
 
-**Scripts:**
+#### Income Model
 
-- `npm run dev`: Run with Node.js
-- `npm start`: Run with Nodemon (auto-reload on file changes)
+```
+- income_id (PK): Auto-increment integer
+- user_id (FK): Owner of income
+- amount: Decimal (10,2)
+- source: Up to 50 chars
+- method: Up to 50 chars (e.g., salary, freelance)
+- description: Text
+- received_at: Auto-generated timestamp
+- Indexes: user_id
+```
 
-**Database Migration:**
+#### Categories Model
 
-- Prisma schema at [prisma/schema.prisma](prisma/schema.prisma)
-- Generate client: `prisma generate`
-- Create migrations: `prisma migrate dev`
+```
+- category_id (PK): Auto-increment integer
+- user_id (FK): NULL for global, set for custom user categories
+- name: Up to 100 chars
+- icon: Optional, up to 100 chars
+- created_at: Auto-generated timestamp
+- Unique constraint: (user_id, name) per user
+- Indexes: user_id
+```
 
----
+### `src/config/db.js`
 
-## **14. IMPLEMENTATION HIGHLIGHTS**
+- Configures PostgreSQL `pg.Pool`
+- Includes helper to convert `?` placeholders into `$1`, `$2`, ...
+- Used by raw SQL code in selected models
 
-**Smart Features:**
+### `src/models/prisma.js`
 
-1. **Budget Flexibility**: Accepts dates three different ways (start+end, start+period, or all three)
-2. **Cascading Deletes**: Deleting user cascades to expenses, budgets, income
-3. **Real-time Alerts**: Expense creation immediately checks budget status
-4. **Selective Data Exposure**: Controllers filter fields returned to clients (excludes password hashes)
-5. **Method-Based Updates**: Only updates fields explicitly sent by client
-6. **Transaction Safety**: All data operations through Prisma for consistency
+- Sets up Prisma with `@prisma/adapter-pg` and `pg.Pool`
+- Exports a Prisma client instance used across all models
+- Prisma client generated to `src/generated/`
 
-**Security Measures:**
+## 14. Utilities
 
-1. Password hashing with bcrypt
-2. JWT token-based authentication
-3. Rate limiting on sensitive endpoints
-4. Input validation and sanitization
-5. CORS enabled for controlled cross-origin requests
-6. User data isolation (users only see their own records)
+### Token Generation
 
----
+- `src/utils/generateToken.js` creates JWTs with 1-day expiration.
+- Uses `process.env.JWT_SECRET` for signing.
 
-This backend is production-ready with comprehensive features for personal financial management, intelligent budget monitoring, and robust security practices.
+### Budget Alerts
+
+- `src/utils/budgetAlert.js` checks existing budgets for matching category and date range.
+- Produces warning or danger alerts when spending exceeds thresholds.
+- Triggers on expense creation and updates.
+
+### Date Helpers
+
+- `src/utils/dateCalc.js` provides `addMonths()` and `diffInMonths()` utilities.
+- Used for budget period calculations.
+
+### Email Utilities
+
+- `src/utils/sendEmail.js` handles sending password recovery emails via Nodemailer.
+
+## 15. Environment Configuration
+
+Create a `.env` file in the Backend root directory with the following variables:
+
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=smart_spend
+DB_USER=postgres
+DB_PASSWORD=your_password
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRATION=1d
+
+# Email Configuration (for password recovery)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database URL (alternative to individual variables)
+DATABASE_URL=postgresql://user:password@localhost:5432/smart_spend
+```
+
+## 16. Setup & Installation
+
+### Prerequisites
+
+- Node.js v16+
+- PostgreSQL database
+
+### Steps
+
+1. **Install dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables:**
+   - Copy `.env.example` to `.env` (if available)
+   - Update with your actual database credentials
+
+3. **Initialize Prisma:**
+
+   ```bash
+   npx prisma migrate dev --name init
+   ```
+
+   This creates the database schema from `prisma/schema.prisma`
+
+4. **Start development server:**
+
+   ```bash
+   npm start
+   ```
+
+   Uses Nodemon for auto-restart on file changes. Server runs on configured PORT (default: 5000)
+
+5. **Verify connection:**
+   - Check terminal for successful database connection message
+   - Test endpoints with Postman or similar tools
+
+## 17. Running the Application
+
+### Development Mode
+
+```bash
+npm start          # With Nodemon (auto-restart)
+```
+
+### Production Mode
+
+```bash
+npm run dev        # Plain Node.js execution
+```
+
+## 18. API Testing
+
+### Authentication Flow
+
+1. Sign up: `POST /api/user/signUp`
+2. Sign in: `POST /api/user/signIn` (receive JWT)
+3. Use token in header: `Authorization: Bearer <token>`
+
+### Example Request
+
+```bash
+curl -X GET http://localhost:5000/api/expenses/read \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## 19. Project Scripts
+
+| Script                   | Purpose                       |
+| ------------------------ | ----------------------------- |
+| `npm install`            | Install dependencies          |
+| `npm start`              | Start with Nodemon (dev)      |
+| `npm run dev`            | Start with plain Node.js      |
+| `npx prisma migrate dev` | Run migrations                |
+| `npx prisma studio`      | Open Prisma Studio GUI        |
+| `npx prisma db seed`     | Seed database (if configured) |
+
+## 20. Notes & Best Practices
+
+- **Mix of ORM & Raw SQL**: The app uses Prisma for most operations but raw SQL in selected models for complex queries
+- **Per-User Data Isolation**: All protected routes require JWT authentication and filter data by `user_id`
+- **Rate Limiting**: Global limiter (100 req/2min) prevents abuse; login has stricter limit (5 attempts/2min)
+- **Error Handling**: Global error handler catches unhandled exceptions; individual controllers should use try-catch
+- **Validation**: All user inputs validated before database operations to prevent invalid data
+- **Date Handling**: Budget logic includes sophisticated date calculations for monthly/yearly periods
+- **Cascading Deletes**: Deleting a user cascades to all related expenses, budgets, income, and categories
+- **JWT Expiration**: Tokens expire after 1 day; clients must refresh by re-authenticating
