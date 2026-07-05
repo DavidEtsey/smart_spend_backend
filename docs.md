@@ -304,7 +304,7 @@ DB_USER=postgres
 DB_PASSWORD=your_password
 
 # JWT Configuration
-JWT_SECRET=your_jwt_secret_key
+JWT_SECRET=your_jwt_secret_k
 JWT_EXPIRATION=1d
 
 # Email Configuration (for password recovery)

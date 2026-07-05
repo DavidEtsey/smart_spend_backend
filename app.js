@@ -11,6 +11,7 @@ const budgetRouter = require('./src/routes/budgetRouter.js');
 const incomeRouter = require('./src/routes/incomeRouter.js');
 const categoryRouter = require('./src/routes/categoryRouter.js');
 const transactionRouter = require('./src/routes/transactionRouter.js')
+const dashboardRouter = require('./src/routes/dashboardRouter.js');
 
 const { apiLimiter } = require('./src/middleware/rateLimiter.js');
 
@@ -30,6 +31,7 @@ app.use('/api/budgets', budgetRouter);
 app.use('/api/income', incomeRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/transactions', transactionRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);
