@@ -50,8 +50,8 @@ model Budget {
   user_id      Int
   category_id  Int
   amount_limit Decimal   @db.Decimal(10, 2)
-  start_date   DateTime  @db.Date
-  end_date     DateTime  @db.Date
+  //start_date   DateTime?  @db.Date
+  //end_date     DateTime?  @db.Date
   created_at   DateTime? @default(now()) @db.Timestamp(6)
   period       Int?
 

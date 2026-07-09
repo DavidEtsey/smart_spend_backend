@@ -12,12 +12,12 @@ const createExpense = async (expense) => {
       description,
       user: {
         connect: {
-          user_id: user_id,
+          user_id
         },
       },
       category: {
         connect: {
-          category_id: category_id
+          category_id
         }
       }
     },

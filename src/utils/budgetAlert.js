@@ -6,8 +6,8 @@ const checkBudgetAndGenerateAlert = async ({user_id, category_id, created_at}) =
     where: {
       user_id,
       category_id,
-      start_date: { lte: new Date(created_at) },// lte meaning <= indicates  budget's starting date should be <= expense's created_at date
-      end_date: { gte: new Date(created_at) }
+      //start_date: { lte: new Date(created_at) },// lte meaning <= indicates  budget's starting date should be <= expense's created_at date
+      //end_date: { gte: new Date(created_at) }
     }
   });
 
@@ -17,11 +17,7 @@ const checkBudgetAndGenerateAlert = async ({user_id, category_id, created_at}) =
   // Get all expenses in this budget range
   const expenses = await prisma.expense.aggregate({
     where: {
-      user_id,
-      created_at: {
-        gte: budget.start_date,
-        lte: budget.end_date
-      }
+      user_id
     },
     select: { amount: true }
   });

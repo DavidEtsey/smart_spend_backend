@@ -1,7 +1,7 @@
 const prisma = require('./prisma.js');
 const { addMonths, diffInMonths } = require('../utils/dateCalc.js');
 
-  
+/*  
 const normalizeBudgetInput = ( start_date, end_date, period ) => {
   // Convert to Date objects immediately
   let start = start_date ? new Date(start_date) : null;
@@ -29,11 +29,12 @@ const normalizeBudgetInput = ( start_date, end_date, period ) => {
 
   return {start_date:start, end_date:end, period };
 };
+*/
 
 
-const createBudget = async ({ user_id, category_id, amount_limit, period, start_date, end_date }) => {
+const createBudget = async ({user_id, category_id, amount_limit}) => {
 
-  const normalized = normalizeBudgetInput(start_date, end_date, period );
+  //const normalized = normalizeBudgetInput(start_date, end_date, period );
 
   const result = await prisma.budget.create({
     data: {
@@ -41,29 +42,30 @@ const createBudget = async ({ user_id, category_id, amount_limit, period, start_
         connect: { category_id }
       },
       amount_limit,
-      start_date: normalized.start_date,
-      end_date: normalized.end_date,
-      period: normalized.period,
       user: {
         connect: { user_id }
       }
     },
     select:{
-      category:true,
+      category:{
+        select:{
+          name:true,
+          icon:true
+        }
+      },
       amount_limit:true,
-      start_date:true ,
-      end_date: true,
-      period: true,
-      created_at:false}
+    }
   });
   return result;
 };
 
 
-const getBudgetsWithSpent = async(user_id) => {
+const getBudgets = async(user_id) => {
   
   const budgets = await prisma.budget.findMany({
     where: {user_id},
+    select:{category:
+      {select:{icon:true,name:true}}}
   });
 
   const expenses = await prisma.expense.groupBy({
@@ -80,12 +82,15 @@ const getBudgetsWithSpent = async(user_id) => {
     const expenseData = expenses.find(e => e.category_id === budget.category_id);
 
     return {
-      id: budget.id,
+      id: budget.budget_id,
       category_id: budget.category_id,
       amount_limit: budget.amount_limit,
-      spent: expenseData?._sum?.amount || 0, // total spent in this category
+      name: budget.category.name,
+      icon: budget.category.icon,
+      spent: expenseData?._sum?.amount || 0 // total spent in this category
     };
   });
+  
   return combined;
 };
 
@@ -146,7 +151,7 @@ const deleteBudget = async (budget_id, user_id) => {
 
 module.exports = {
   createBudget,
-  getBudgetsWithSpent,
+  getBudgets,
   updateBudget,
   deleteBudget,
 };

@@ -4,35 +4,41 @@ const budgetModel = require('../models/budgetModel.js');
 const budgetController = {
     async createBudget(req, res, next) {
         try {
-            const { category_id, amount_limit, period, start_date, end_date } = req.body;
+            const { category_id, amount_limit } = req.body;
 
-            // 1. Required fields (flexible)
-            if (!category_id || !amount_limit || !start_date) {
-                return res.status(400).json({ message: "Category ID, Amount, and Start_date are required" });
+            //Required fields (flexible)
+            if (!category_id || !amount_limit ) {
+                return res.status(400).json({ message: "Category ID and Amount are required" });
             }
-        
+            
+            /*
             // Either (end_date OR period) must exist
             if (!end_date && !period) {
                 return res.status(400).json({message: "Provide either end_date or period"});
             }
+            */
 
-            // 2. Validate amount
+            //Validate amount
             if (isNaN(amount_limit) || amount_limit <= 0) {
                 return res.status(400).json({ message: "Amount must be a greater than 0" });
             }
             
-            // 3. Validate date format
+            /*
+            //Validate date format
             const start = new Date(start_date);
             const end = end_date ? new Date(end_date) : null;
-        
+            
+
             if (isNaN(start.getTime()) || (end_date && isNaN(end.getTime()))) {
                 return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD" });
             }
         
+            
             // 4. Validate date logic
             if (start_date > end_date) {
                 return res.status(400).json({ message: "Start date cannot be after end date" });
             }
+            
 
             // 5. Validate period (if provided)
             if (period && (isNaN(period) || period <= 0)) {
@@ -40,17 +46,13 @@ const budgetController = {
                     message: "Period must be a positive number"
                 });
             }
+            */
 
             const budget = await budgetModel.createBudget({
                 user_id: req.user.user_id,
                 category_id,
                 amount_limit,
-                period,
-                start_date,
-                end_date,
             });
-
-            
 
             res.status(201).json({
             message: 'Budget created successfully',
@@ -65,7 +67,7 @@ const budgetController = {
 
     async getBudget(req, res, next) {
         try{
-            const budgets = await budgetModel.getBudgetsWithSpent(req.user.user_id);
+            const budgets = await budgetModel.getBudgets(req.user.user_id);
             //console.log("req.user:", req.user);
             //console.log(budgets);
 
@@ -88,8 +90,10 @@ const budgetController = {
                 }
 
                 return {
-                    budget_id: b.budget_id,
+                    budget_id: b.id,
                     category_id: b.category_id,
+                    name : b.name,
+                    icon: b.icon,
                     amount_limit: b.amount_limit,
                     spent: b.spent,
                     remaining,
