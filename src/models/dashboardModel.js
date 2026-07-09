@@ -1,192 +1,283 @@
 const prisma = require("./prisma.js");
 
-const transactionDashboard = async (userId) => {
+const transactionDashboard = async (user_id, month, year) => {
+
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 1);
 
   const incomeTotal = await prisma.income.aggregate({
-    where: { user_id: userId },
+    where: { user_id, 
+    received_at: { gte: startDate, lt: endDate } },
     _sum: {
       amount: true
     }
   });
 
   const expenseTotal = await prisma.expense.aggregate({
-    where: { user_id: userId },
+    where: { user_id, 
+    created_at: { gte: startDate, lt: endDate } },
     _sum: {
       amount: true
     }
   });
 
-  const recentIncome = await prisma.income.findMany({
-    where: { user_id: userId },
-    orderBy: {
-      received_at: "desc"
-    },
-    take: 5
+  const income =Number(incomeTotal._sum.amount || 0);
+  const expense =Number(expenseTotal._sum.amount || 0);
+  const balance = income - expense;
+  const savings = balance || 0;
+
+  // Get incomes
+  const incomes = await prisma.income.findMany({
+    where: {
+      user_id,
+      received_at: {
+        gte: startDate,
+        lt: endDate
+      }
+    }
   });
 
-  const recentExpenses = await prisma.expense.findMany({
-    where: { user_id: userId },
+  // Get expenses
+  const expenses = await prisma.expense.findMany({
+    where: {
+      user_id,
+      created_at: {
+        gte: startDate,
+        lt: endDate
+      }
+    },
     include: {
       category: true
-    },
-    orderBy: {
-      created_at: "desc"
-    },
-    take: 10
+    }
   });
 
+  const today = new Date();
+  const todayString = today.toDateString();
+
+  // Merge transactions
+  const transactions = [
+    ...incomes.map((i) => {
+      const receivedAt = new Date(i.received_at);
+      return {
+        type: "income",
+        title: i.source,
+        amount: i.amount,
+        description: i.description,
+        date: receivedAt.toISOString(),
+        displayDate: receivedAt.toDateString() === todayString ? "Today" : receivedAt.toDateString(),
+        sortDate: receivedAt
+      };
+    }),
+    ...expenses.map((e) => {
+      const createdAt = new Date(e.created_at);
+      return {
+        type: "expense",
+        title: e.category?.name,
+        amount: e.amount,
+        description: e.description,
+        date: createdAt.toISOString(),
+        displayDate: createdAt.toDateString() === todayString ? "Today" : createdAt.toDateString(),
+        sortDate: createdAt
+      };
+    })
+  ];
+
+  // Sort latest first
+  transactions.sort((a, b) => b.sortDate - a.sortDate);
+
+  // Group by day
+  const grouped = {};
+
+  transactions.forEach((t) => {
+    const day = t.sortDate.toDateString() === todayString ? "Today" : t.sortDate.toDateString();
+
+    if (!grouped[day]) {
+      grouped[day] = [];
+    }
+    grouped[day].push(t);
+  });
+  
   return {
     incomeTotal,
     expenseTotal,
-    recentIncome,
-    recentExpenses
+    balance,
+    savings,
+    transactions: grouped,
   };
 };
 
 
-const getAnalytics = async (userId) => {
+const getPieChart = async (user_id) => {
 
-  const categoryBreakdown =
+  const expenses=
     await prisma.expense.groupBy({
       by: ["category_id"],
       where: {
-        user_id: userId
+        user_id
       },
       _sum: {
         amount: true
       }
     });
+  
+  const totalExpense = expenses.reduce(
+    (sum, item) => sum + Number(item._sum.amount),
+    0
+  );
+  const categoryIds = expenses.map((item) => item.category_id);
 
-  const categories =
-    await prisma.categories.findMany();
+  const categories = await prisma.categories.findMany({
+    where: {
+      category_id: {
+        in: categoryIds
+      }
+    }
+  });
 
-  const expenseOverview =
-    categoryBreakdown.map(item => {
+  const formatted = expenses.map((expense) => {
+    const category = categories.find(
+      (cat) => cat.category_id === expense.category_id
+    );
 
-      const category =
-        categories.find(
-          c => c.category_id === item.category_id
-        );
+    const amount = Number(expense._sum.amount);
+    const percentage = ((amount / totalExpense) * 100).toFixed(1);
 
-      return {
-        category: category?.name,
-        amount: Number(item._sum.amount)
+    return {
+      category: category.name,
+      amount,
+      percentage: percentage + "%"
+    };
+  });
+  
+  return formatted;
+};
+
+
+const getBarChart = async (user_id) => {
+
+  const income = await prisma.income.findMany({
+    where: {
+      user_id: user_id
+    }
+  });
+
+  const expenses = await prisma.expense.findMany({
+    where: {
+      user_id: user_id
+    }
+  });
+
+  const monthlyData = {};
+
+  income.forEach((item) => {
+    const month = new Date(item.received_at).toLocaleString("default", {
+      month: "short"
+    });
+
+    if (!monthlyData[month]) {
+      monthlyData[month] = {
+        month,
+        income: 0,
+        expense: 0
       };
+    }
+
+    monthlyData[month].income += Number(item.amount);
+  });
+
+  expenses.forEach((item) => {
+    const month = new Date(item.created_at).toLocaleString("default", {
+      month: "short"
     });
 
-  return expenseOverview;
+    if (!monthlyData[month]) {
+      monthlyData[month] = {
+        month,
+        income: 0,
+        expense: 0
+      };
+    }
+
+    monthlyData[month].expense += Number(item.amount);
+  });
+
+  return Object.values(monthlyData);
+
 };
 
 
-const monthlyAnalytics = async (userId) => {
+const getCategoryStats = async (user_id) => {
+  // Get all categories
+  const categories = await prisma.categories.findMany({
+    where: {
+      OR: [
+        { user_id: null },       // Global categories
+        { user_id }      // User categories
+      ]
+    },
+    orderBy: {
+      name: "asc"
+    }
+  });
 
-  const result = [];
+  const results = [];
 
-  for(let month = 0; month < 12; month++){
+  for (const category of categories) {
 
-    const start =
-      new Date(2026, month, 1);
-
-    const end =
-      new Date(2026, month + 1, 1);
-
-    const income =
-      await prisma.income.aggregate({
-        where: {
-          user_id: userId,
-          received_at: {
-            gte: start,
-            lt: end
-          }
-        },
-        _sum: {
-          amount: true
-        }
-      });
-
-    const expense =
-      await prisma.expense.aggregate({
-        where: {
-          user_id: userId,
-          created_at: {
-            gte: start,
-            lt: end
-          }
-        },
-        _sum: {
-          amount: true
-        }
-      });
-
-    result.push({
-      month: start.toLocaleString("default", {
-        month: "short"
-      }),
-      income:
-        Number(income._sum.amount || 0),
-      expense:
-        Number(expense._sum.amount || 0)
-    });
-  }
-
-  return result;
-};
-
-
-const getCategoryStats = async (userId) => {
-
-  const stats =
-    await prisma.expense.groupBy({
-      by: ["category_id"],
+    // Expenses belonging to this category
+    const expenses = await prisma.expense.findMany({
       where: {
-        user_id: userId
-      },
-      _sum: {
-        amount: true
-      },
-      _count: {
-        expense_id: true
+        user_id,
+        category_id: category.category_id
       }
     });
 
-  const categories =
-    await prisma.categories.findMany();
-
-  const totalExpense =
-    stats.reduce(
-      (sum,item)=>
-      sum + Number(item._sum.amount),
+    const expenseAmount = expenses.reduce(
+      (sum, item) => sum + Number(item.amount),
       0
     );
 
-  return stats.map(item => {
+    // Income whose source matches category name
+    const incomes = await prisma.income.findMany({
+      where: {
+        user_id,
+        source: category.name
+      }
+    });
 
-    const category =
-      categories.find(
-        c=>c.category_id===item.category_id
-      );
+    const incomeAmount = incomes.reduce(
+      (sum, item) => sum + Number(item.amount),
+      0
+    );
 
-    const amount =
-      Number(item._sum.amount);
+    const transactionCount =
+      expenses.length + incomes.length;
 
-    return {
-      category_id: item.category_id,
-      category_name: category?.name,
-      icon: category?.icon,
-      totalAmount: amount,
-      transactionCount:
-        item._count.expense_id,
-      percentage:
-        ((amount/totalExpense)*100)
-          .toFixed(1) + '%'
-    };
-  });
+    const totalAmount =
+      expenseAmount + incomeAmount;
+
+    // Don't return empty categories
+    if (transactionCount > 0) {
+      results.push({
+        category_id: category.category_id,
+        name: category.name,
+        icon: category.icon,
+        transactions: transactionCount,
+        totalAmount
+      });
+    }
+  }
+
+  // Largest amount first
+  results.sort((a, b) => b.totalAmount - a.totalAmount);
+
+  return results;
 };
 
 
 module.exports = {
   transactionDashboard,
-  getAnalytics,
-  monthlyAnalytics,
+  getPieChart,
+  getBarChart,
   getCategoryStats
 };

@@ -10,6 +10,7 @@ const { updateProfileValidation, validate } = require('../validations/profileVal
 // Public auth routes
 authRouter.post('/signUp', signUpValidation, validater, authController.userSignUp);
 authRouter.post('/signIn', loginLimiter, signInValidation,validater,authController.userSignIn);
+authRouter.post('/logout', verifyToken, authController.userLogout);
 
 // Profile routes
 authRouter.get('/profile', verifyToken, authController.getProfile);

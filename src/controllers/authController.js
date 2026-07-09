@@ -1,4 +1,6 @@
 const authModel = require('../models/authModel.js');
+const verifyToken = require('../middleware/authMiddleware.js');
+
 const authController = {
     async userSignUp(req, res, next) {
         try {
@@ -26,6 +28,24 @@ const authController = {
             });
         } catch (error) {
             console.error('Error in userSignIn:', error);
+            next(error);
+        }
+    },
+
+    async userLogout(req, res, next) {
+        try {
+            const authHeader = req.headers.authorization;
+            const token = authHeader?.split(' ')[1];
+
+            if (token) {
+                verifyToken.blacklistToken(token);
+            }
+
+            res.status(200).json({
+                message: 'Logout successful'
+            });
+        } catch (error) {
+            console.error('Error in userLogout:', error);
             next(error);
         }
     },

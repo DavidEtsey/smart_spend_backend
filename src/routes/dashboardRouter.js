@@ -5,7 +5,7 @@ const  {transactionDashboard,analyticsDashboard,categoryDashboard} = require('..
 
 dashboardRouter.use(verifyToken);
 
-dashboardRouter.get('/transactions', transactionDashboard);
+dashboardRouter.get('/transactions/:month?/:year?', transactionDashboard);
 dashboardRouter.get('/analytics', analyticsDashboard);
 dashboardRouter.get('/categories',categoryDashboard);
 
