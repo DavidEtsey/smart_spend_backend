@@ -1,16 +1,16 @@
-const db = require('../config/db');
-const prisma =require('./prisma.js');
+const prisma = require('./prisma.js');
 
 const incomeModel ={
-    async createIncome({user_id,amount, source, method, description}) {
+    async createIncome({user_id, amount, category_id, account_id, description, currency}) {
 
         return prisma.income.create({
             data: {
                 user_id,
                 amount,
-                source,
-                method,
-                description
+                category_id,
+                account_id,
+                description,
+                currency: currency || "GHS"
             }
         });
     },
@@ -18,44 +18,49 @@ const incomeModel ={
     async getUserIncome(user_id) {
         return prisma.income.findMany({
             where: { user_id: user_id },
-            select:{source:true,amount:true,method:true},
+            select:{
+                income_id: true,
+                amount: true,
+                category_id: true,
+                account_id: true,
+                description: true,
+                currency: true,
+                received_at: true
+            },
             orderBy: { received_at: "desc" }
         });
     },
 
-    async updateIncome (income_id, user_id, updates) {
-  
-        const keys = Object.keys(updates);      // ['amount','source']  
-        const values = Object.values(updates);  // [100,'Cash']
-        
-        const setClause = keys
-        .map((k, i) => `${k}=$${i + 1}`)
-        .join(', '); // "amount=$1, category=$2"
-        
-        const query=
-            `UPDATE income
-            SET ${setClause}
-            WHERE income_id=$${keys.length + 1} AND user_id=$${keys.length + 2}
-            RETURNING *`
-        ;
+    async updateIncome(income_id, user_id, updates) {
+        // Verify ownership before updating
+        const income = await prisma.income.findUnique({
+            where: { income_id: parseInt(income_id) }
+        });
 
-        const result = await db.query(query, [
-            ...values,
-            income_id,
-            user_id]);
-        return result.rows[0];
+        if (!income || income.user_id !== user_id) {
+            return null;
+        }
+
+        return prisma.income.update({
+            where: { income_id: parseInt(income_id) },
+            data: updates
+        });
     },
 
-    async deleteIncome (income_id , user_id) {
-        const result = await db.query(
-            'DELETE FROM income WHERE income_id=$1 AND user_id=$2 RETURNING *',
-            [income_id, user_id]
-        );
+    async deleteIncome(income_id, user_id) {
+        // Verify ownership before deleting
+        const income = await prisma.income.findUnique({
+            where: { income_id: parseInt(income_id) }
+        });
 
-        return result.rows[0];
+        if (!income || income.user_id !== user_id) {
+            return null;
+        }
+
+        return prisma.income.delete({
+            where: { income_id: parseInt(income_id) }
+        });
     }
-
-
 }
 
 module.exports = incomeModel;

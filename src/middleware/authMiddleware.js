@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-const blacklistedTokens = new Set();
+const prisma = require('../models/prisma.js');
 
 const verifyToken = async (req, res, next) => {
   try {
@@ -12,14 +11,10 @@ const verifyToken = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    if (blacklistedTokens.has(token)) {
-      return res.status(401).json({ message: 'Token has been revoked.Login again to continue' });
-    }
-
     // Verify token
-    const decoded = await jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Attach user info to request
+    // Attach user info to request (access token is authoritative)
     req.user = decoded;
     req.token = token;
 
@@ -29,9 +24,14 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-verifyToken.blacklistToken = (token) => {
-  if (token) {
-    blacklistedTokens.add(token);
+verifyToken.revokeToken = async (user_id) => {
+  try {
+    await prisma.refreshToken.updateMany({
+      where: { user_id },
+      data: { revokedAt: new Date() },
+    });
+  } catch (error) {
+    console.error('Error revoking token:', error);
   }
 };
 

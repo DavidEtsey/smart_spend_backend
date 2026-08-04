@@ -2,14 +2,15 @@ const express = require('express');
 const authRouter = express.Router();
 const verifyToken = require('../middleware/authMiddleware.js');
 const authController = require('../controllers/authController.js');
-const { loginLimiter } = require('../middleware/rateLimiter.js');
-const { signUpValidation, signInValidation, validater } = require('../validations/authValidation.js');
+const { loginLimiter,apiLimiter } = require('../middleware/rateLimiter.js');
+const { registerValidation, logInValidation, validater } = require('../validations/authValidation.js');
 const { updateProfileValidation, validate } = require('../validations/profileValidation.js');
 
 
 // Public auth routes
-authRouter.post('/signUp', signUpValidation, validater, authController.userSignUp);
-authRouter.post('/signIn', loginLimiter, signInValidation,validater,authController.userSignIn);
+authRouter.post('/register', registerValidation, validater, authController.register);
+authRouter.post('/login', loginLimiter, logInValidation,validater,authController.login);
+authRouter.post('/refresh_token', authController.refreshToken);
 authRouter.post('/logout', verifyToken, authController.userLogout);
 
 // Profile routes

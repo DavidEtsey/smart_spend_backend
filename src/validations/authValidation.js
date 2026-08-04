@@ -1,7 +1,7 @@
 const { body, validationResult } = require('express-validator');
 
 // Sign Up Validation
-const signUpValidation = [
+const registerValidation = [
 
   body('username')
     .trim()
@@ -32,7 +32,7 @@ const signUpValidation = [
 ];
 
 // Sign In Validation
-const signInValidation = [
+const logInValidation = [
   body('identifier')
     .trim()
     .notEmpty()
@@ -68,7 +68,7 @@ const validater = async (req, res, next) => {
 };
 
 module.exports = {
-  signUpValidation,
-  signInValidation,
+  registerValidation,
+  logInValidation,
   validater
 };

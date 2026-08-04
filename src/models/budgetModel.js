@@ -32,16 +32,16 @@ const normalizeBudgetInput = ( start_date, end_date, period ) => {
 */
 
 
-const createBudget = async ({user_id, category_id, amount_limit}) => {
-
-  //const normalized = normalizeBudgetInput(start_date, end_date, period );
-
+const createBudget = async (user_id, category_id, amount_limit,month,year) => {
+  
   const result = await prisma.budget.create({
     data: {
       category:{
         connect: { category_id }
       },
-      amount_limit,
+      amount:amount_limit,
+      month,
+      year,
       user: {
         connect: { user_id }
       }
@@ -53,7 +53,9 @@ const createBudget = async ({user_id, category_id, amount_limit}) => {
           icon:true
         }
       },
-      amount_limit:true,
+      amount:true,
+      month:true,
+      year:true
     }
   });
   return result;
@@ -84,7 +86,7 @@ const getBudgets = async(user_id) => {
     return {
       id: budget.budget_id,
       category_id: budget.category_id,
-      amount_limit: budget.amount_limit,
+      amount_limit: budget.amount,
       name: budget.category.name,
       icon: budget.category.icon,
       spent: expenseData?._sum?.amount || 0 // total spent in this category

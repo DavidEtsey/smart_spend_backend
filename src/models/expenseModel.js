@@ -1,95 +1,84 @@
 const prisma = require('./prisma.js');
-const {checkBudgetAndGenerateAlert} = require('../utils/budgetAlert.js');
+const { checkBudgetAndGenerateAlert } = require('../utils/budgetAlert.js');
 
-// CREATING AN EXPENSE
-const createExpense = async (expense) => {
-
-  const { user_id, amount, description, category_id } = expense;
-  
-  const expData= await prisma.expense.create({
+// CREATE EXPENSE
+const createExpense = async ({ user_id, amount, category_id, account_id, description, currency }) => {
+  const expData = await prisma.expense.create({
     data: {
+      user_id,
       amount,
+      category_id,
+      account_id,
       description,
-      user: {
-        connect: {
-          user_id
-        },
-      },
-      category: {
-        connect: {
-          category_id
-        }
-      }
-    },
-    select:{
-      user_id: true,
-      category_id: true,
-      created_at:true
+      currency: currency || "GHS"
     }
   });
 
   // Check budget and generate alert
-  const generateAlert= await checkBudgetAndGenerateAlert(expData);
+  const alert = await checkBudgetAndGenerateAlert(expData);
 
- return { ...expData, alert: generateAlert };
+  return { ...expData, alert };
 };
-
 
 // GET BY USER
 const getExpensesByUser = async (user_id) => {
-  
   return await prisma.expense.findMany({
-    where: { user_id:Number(user_id) },
-    orderBy: {
-      category_id: 'desc'
-    }
+    where: { user_id },
+    select: {
+      expense_id: true,
+      amount: true,
+      category_id: true,
+      account_id: true,
+      description: true,
+      currency: true,
+      created_at: true
+    },
+    orderBy: { created_at: "desc" }
   });
 };
 
-//UPDATE
+// UPDATE EXPENSE
 const updateExpense = async (expense_id, user_id, updates) => {
-  
-  await prisma.expense.updateMany({
-    where: { expense_id: Number(expense_id), user_id },
+  // Verify ownership before updating
+  const expense = await prisma.expense.findUnique({
+    where: { expense_id: parseInt(expense_id) }
+  });
+
+  if (!expense || expense.user_id !== user_id) {
+    return null;
+  }
+
+  const updated = await prisma.expense.update({
+    where: { expense_id: parseInt(expense_id) },
     data: updates
   });
 
-  
-  const data= await prisma.expense.findFirst({
-    where: { expense_id: Number(expense_id), user_id }
-  });
+  // Check budget and generate alert
+  const alert = await checkBudgetAndGenerateAlert(updated);
 
-  const generateAlert= await checkBudgetAndGenerateAlert({
-    user_id:data.user_id,
-    category:data.category,
-    created_at:data.created_at
-  });
-
-
-  return {data, alert: generateAlert}
+  return { ...updated, alert };
 };
 
-//DEL 
+// DELETE EXPENSE
 const deleteExpense = async (expense_id, user_id) => {
-  const existing = await prisma.expense.findFirst({
-    where: { expense_id, user_id }
+  // Verify ownership before deleting
+  const expense = await prisma.expense.findUnique({
+    where: { expense_id: parseInt(expense_id) }
   });
 
-  if (!existing) return null;
+  if (!expense || expense.user_id !== user_id) {
+    return null;
+  }
 
-  await prisma.expense.delete({
-    where: { expense_id }
+  return await prisma.expense.delete({
+    where: { expense_id: parseInt(expense_id) }
   });
-
-  return existing;
 };
 
-// GET ALL
+// GET ALL EXPENSES
 const getAllExpenses = async () => {
   return await prisma.expense.findMany({
-    orderBy: {
-      category_id: 'desc'
-    }
+    orderBy: { created_at: "desc" }
   });
 };
 

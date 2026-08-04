@@ -12,6 +12,7 @@ const incomeRouter = require('./src/routes/incomeRouter.js');
 const categoryRouter = require('./src/routes/categoryRouter.js');
 const transactionRouter = require('./src/routes/transactionRouter.js')
 const dashboardRouter = require('./src/routes/dashboardRouter.js');
+const settingsRouter = require('./src/routes/settingsRouter.js');
 
 const { apiLimiter } = require('./src/middleware/rateLimiter.js');
 
@@ -25,18 +26,32 @@ app.use(express.json());
 app.use(logger);
 
 //Routes imported
-app.use('/api/user',authRouter);
+app.use('/api/auth/user',authRouter);
+app.use('/api/transactions', transactionRouter);
 app.use('/api/expenses',expenseRouter);
 app.use('/api/budgets', budgetRouter);
 app.use('/api/income', incomeRouter);
 app.use('/api/category', categoryRouter);
-app.use('/api/transactions', transactionRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/settings', settingsRouter);
 
+// Global error handler (MUST be last middleware)
 app.use((err, req, res, next) => {
-  console.error(err);
-  // You will see an OH NO! in the page, with a status code of 500 that can be seen in the network tab of the dev tools
-  res.status(500).send(err.message);
+  console.error('❌ Error:', {
+    message: err.message,
+    statusCode: err.statusCode,
+    stack: err.stack
+  });
+
+  // Default error
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal server error';
+
+  res.status(statusCode).json({
+    success: false,
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
 });
 
 pool.query("SELECT 1")

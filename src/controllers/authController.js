@@ -1,8 +1,9 @@
 const authModel = require('../models/authModel.js');
 const verifyToken = require('../middleware/authMiddleware.js');
+const AppError = require('../utils/AppError.js');
 
 const authController = {
-    async userSignUp(req, res, next) {
+    async register(req, res, next) {
         try {
             const userData = req.body;
 
@@ -17,12 +18,12 @@ const authController = {
         }
     },
 
-    async userSignIn(req, res, next) {
+    async login(req, res, next) {
         try {
             const { identifier, password } = req.body;
             
             const result = await authModel.signIn({ identifier, password });
-            res.status(201).json({
+            res.status(200).json({
                 message: 'Login successful',
                 ...result
             });
@@ -34,11 +35,10 @@ const authController = {
 
     async userLogout(req, res, next) {
         try {
-            const authHeader = req.headers.authorization;
-            const token = authHeader?.split(' ')[1];
+            const userId = req.user.user_id;
 
-            if (token) {
-                verifyToken.blacklistToken(token);
+            if (userId) {
+                await verifyToken.revokeToken(userId);
             }
 
             res.status(200).json({
@@ -46,6 +46,27 @@ const authController = {
             });
         } catch (error) {
             console.error('Error in userLogout:', error);
+            next(error);
+        }
+    },
+
+    async refreshToken(req, res, next) {
+        try {
+            const presented = (req.headers.authorization && req.headers.authorization.startsWith('Bearer '))
+                ? req.headers.authorization.split(' ')[1]
+                : req.body.refresh_token;
+
+            if (!presented) {
+                throw new AppError('Refresh token required in Authorization header or body', 400);
+            }
+
+            const result = await authModel.refreshToken(presented);
+            res.status(200).json({
+                success: true,
+                message: 'Token refreshed successfully',
+                ...result
+            });
+        } catch (error) {
             next(error);
         }
     },

@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
-const { sendEmail } =require('../utils/sendEmail.js');
+const { sendEmail } =require('../services/sendEmail.js');
 const generateToken = require('../utils/generateToken.js')
+const crypto = require('crypto');
 
 const prisma = require('./prisma.js');
 
@@ -49,12 +50,12 @@ const authModel = {
 
         const user = await prisma.user.findFirst({
             where: {
-            OR: [
-                { username: identifier },
-                { email: identifier }
-            ]
+                OR: [
+                    { username: identifier },
+                    { email: identifier }
+                ]
             },
-            select:{
+            select: {
                 user_id: true,
                 username: true,
                 password_hash: true
@@ -71,18 +72,34 @@ const authModel = {
             throw new Error('Invalid Password');
         }
 
-        const token = generateToken({
+        const accessToken = generateToken({
             user_id: user.user_id,
         });
 
+        // Create refresh token and store its hash
+        const refreshToken = crypto.randomBytes(48).toString('hex');
+        const tokenHash = await bcrypt.hash(refreshToken, 10);
+        const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); // 7 days
+
+        await prisma.refreshToken.create({
+            data: {
+                user_id: user.user_id,
+                tokenHash,
+                expiresAt,
+            }
+        });
+
         return {
-            token,
+            token: accessToken,
+            refreshToken,
             user: {
                 user_id: user.user_id,
                 username: user.username
             }
         };
     },
+
+
 
     async getProfile(userId) {
 
@@ -190,25 +207,26 @@ const authModel = {
             return { message: "If that email exists, a reset code has been sent." };
         }
 
-        // Generate code (6 digits)
+        // Generate token (6 digits)
         const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
 
         // Expiry (10 minutes)
-        const expiry = new Date(Date.now() + 10 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        const tokenHash = await bcrypt.hash(resetToken, 10);
 
-        await prisma.user.update({
-            where: { email },
+        await prisma.passwordReset.create({
             data: {
-                reset_code: resetToken,
-                reset_code_expires: expiry,
-            },
+                user_id: user.user_id,
+                tokenHash,
+                expiresAt,
+            }
         });
 
         // Send email
         await sendEmail(
         email,
-        "SmartSpend Reset Code",
-        `Your password reset code is: ${resetToken}\n\nThis code expires in 10 minutes.`
+        "Password Reset Code",
+        resetToken
         );
         
     },
@@ -219,32 +237,107 @@ const authModel = {
             where: { email },
         });
 
-        if (!user || !user.reset_code || !user.reset_code_expires) {
-        return { message: "Invalid or expired code" };
+        if (!user) {
+            throw new Error("Invalid or expired code");
+        }
+
+        // Find valid password reset record
+        const passwordReset = await prisma.passwordReset.findFirst({
+            where: {
+                user_id: user.user_id,
+                expiresAt: {
+                    gt: new Date(), // Must not be expired
+                },
+                usedAt: null, // Must not have been used
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        if (!passwordReset) {
+            throw new Error("Invalid or expired code");
         }
 
         // Check token match
-        if (user.reset_code !== reset_code) {
-            return { message: "Invalid code" };
+        const isValidToken = await bcrypt.compare(reset_code, passwordReset.tokenHash);
+        if (!isValidToken) {
+            throw new Error("Invalid code");
         }
 
-        // Check expiry
-        if (new Date() > user.reset_code_expires) {
-            return { message: "Code expired" };
-        }
-
-        // Hash password
+        // Hash new password
         const hashedPassword = await bcrypt.hash(new_password, 10);
 
-        await prisma.user.update({
-            where: { email },
-            data: {
-                password_hash: hashedPassword,
-                reset_code: null,
-                reset_code_expires: null,
+        // Update password and mark token as used
+        await Promise.all([
+            prisma.user.update({
+                where: { email },
+                data: { password_hash: hashedPassword },
+            }),
+            prisma.passwordReset.update({
+                where: { id: passwordReset.id },
+                data: { usedAt: new Date() },
+            })
+        ]);
+
+    }
+
+    ,
+    async refreshToken(presentedToken) {
+        if (!presentedToken) throw new Error('No refresh token provided');
+
+        // Find active refresh tokens (not revoked, not expired)
+        const tokens = await prisma.refreshToken.findMany({
+            where: {
+                revokedAt: null,
+                expiresAt: { gt: new Date() }
             },
+            orderBy: { createdAt: 'desc' }
         });
 
+        let match = null;
+        for (const t of tokens) {
+            const ok = await bcrypt.compare(presentedToken, t.tokenHash);
+            if (ok) {
+                match = t;
+                break;
+            }
+        }
+
+        if (!match) throw new Error('Invalid or expired refresh token');
+
+        // Issue new access token
+        const accessToken = generateToken({ user_id: match.user_id });
+
+        // Token rotation: mark old token as used, revoke all other tokens, create new one
+        const newRefreshToken = crypto.randomBytes(48).toString('hex');
+        const newHash = await bcrypt.hash(newRefreshToken, 10);
+        const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        await prisma.$transaction([
+            // Mark used token with usedAt timestamp
+            prisma.refreshToken.update({
+                where: { id: match.id },
+                data: { usedAt: new Date() }
+            }),
+            // Revoke all other active tokens for this user (security: only one active token at a time)
+            prisma.refreshToken.updateMany({
+                where: {
+                    user_id: match.user_id,
+                    id: { not: match.id },
+                    revokedAt: null
+                },
+                data: { revokedAt: new Date() }
+            }),
+            // Create new token for next refresh
+            prisma.refreshToken.create({
+                data: {
+                    user_id: match.user_id,
+                    tokenHash: newHash,
+                    expiresAt: newExpiresAt
+                }
+            })
+        ]);
+
+        return { token: accessToken, refreshToken: newRefreshToken };
     }
 };
 

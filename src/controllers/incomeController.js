@@ -1,58 +1,53 @@
 const incomeModel = require('../models/incomeModel.js');
+const AppError = require('../utils/AppError.js');
 
 const incomeController ={
     async addIncome(req, res, next) {
-
         try {
+            const { category_id, account_id, amount, description, currency } = req.body;
 
-            const { amount, source, method, description} = req.body;
-
-            const allowedMethods = [
-                "Cash",
-                "Mobile Money",
-                "Bank Transfer",
-                "Cheque"
-            ];
-
-            // 1. Required fields
-            if (!amount || !method) {
-                return res.status(400).json({
-                    message: "Amount and method are required"
-                });
+            // Validate required fields
+            if (!amount || !category_id || !account_id || !description) {
+                throw new AppError("Amount, category_id, account_id, and description are required", 400);
             }
 
-            // 2. Amount must be a number
+            // Amount must be a number and positive
             if (isNaN(amount) || Number(amount) <= 0) {
-                return res.status(400).json({
-                    message: "Amount must be a positive number"
-                });
+                throw new AppError("Amount must be a positive number", 400);
             }
 
-            // 2. Amount should not be unreasonably large
+            // Amount should not be unreasonably large
             if (Number(amount) > 100000000) {
-                return res.status(400).json({
-                    message: "Amount too large"
-                });
+                throw new AppError("Amount too large", 400);
             }
 
-            // 4. Validate method
-            if (!allowedMethods.includes(method)) {
-                return res.status(400).json({
-                    message: "Invalid payment method"
-                });
+            // Validate IDs are positive integers
+            if (!Number.isInteger(parseInt(category_id)) || parseInt(category_id) <= 0) {
+                throw new AppError("Invalid category_id", 400);
             }
-            console.log(typeof(amount))
+
+            if (!Number.isInteger(parseInt(account_id)) || parseInt(account_id) <= 0) {
+                throw new AppError("Invalid account_id", 400);
+            }
+
+            // Use GHS as default currency if not provided
+            const finalCurrency = currency || "GHS";
 
             const income = await incomeModel.createIncome({
                 user_id: req.user.user_id,
                 amount: Number(amount),
-                source,
-                method,
-                description
+                category_id: parseInt(category_id),
+                account_id: parseInt(account_id),
+                description,
+                currency: finalCurrency
             });
             
+            if (!income) {
+                throw new AppError("Failed to create income record", 500);
+            }
 
             res.status(201).json({
+                success: true,
                 message: "Income recorded successfully",
                 income
             });
@@ -66,16 +61,29 @@ const incomeController ={
         try {
             const incomes = await incomeModel.getUserIncome(req.user.user_id);
 
-            const safeData= incomes.map( i =>({
-                source: i.source,
-                amount:i.amount,
-                method:i.method,
-                //description:i.description
-            }))
+            if (!incomes || incomes.length === 0) {
+                return res.json({
+                    success: true,
+                    total: 0,
+                    message: "No incomes recorded yet",
+                    data: []
+                });
+            }
+
+            const safeData = incomes.map(i => ({
+                income_id: i.income_id,
+                amount: i.amount,
+                category_id: i.category_id,
+                account_id: i.account_id,
+                description: i.description,
+                currency: i.currency,
+                received_at: i.received_at
+            }));
 
             res.json({
-                total: "Incomes recorded :"+incomes.length,
-                safeData
+                success: true,
+                total: incomes.length,
+                data: safeData
             });
 
         } catch (err) {
@@ -85,7 +93,7 @@ const incomeController ={
 
     async updateIncome(req,res,next){
         try{
-            const allowedFields=['source', 'amount', 'method', 'description']
+            const allowedFields=['amount', 'category_id', 'account_id', 'description', 'currency'];
 
             //Fields that user actually altered
             const updates = Object.fromEntries(
@@ -94,9 +102,14 @@ const incomeController ={
             );
 
             // must update at least one
-            if (!Object.keys(updates).length)
-            return res.status(400).json({ error: 'Provide at least one field to update' });
-        
+            if (!Object.keys(updates).length) {
+                throw new AppError('Provide at least one field to update', 400);
+            }
+
+            // Convert IDs to integers if provided
+            if (updates.category_id) updates.category_id = parseInt(updates.category_id);
+            if (updates.account_id) updates.account_id = parseInt(updates.account_id);
+            if (updates.amount) updates.amount = Number(updates.amount);
 
             const data = await incomeModel.updateIncome(
                 req.params.income_id,
@@ -104,13 +117,17 @@ const incomeController ={
                 updates
             );
 
+            if (!data) {
+                throw new AppError('Income not found or unauthorized', 404);
+            }
 
             res.json({
-                message: 'Expense updated successfully',
+                success: true,
+                message: 'Income updated successfully',
                 data: data
             });
-        }catch (err) {
-            next(err)
+        } catch (err) {
+            next(err);
         }
     },
 
@@ -120,15 +137,17 @@ const incomeController ={
                 req.params.income_id,
                 req.user.user_id
             );
+            
             if (!deleted) {
-                return res.status(404).json({ error: 'Expense not deleted' });
+                throw new AppError('Income not found or unauthorized', 404);
             }
+
             res.json({
-                message: 'Expense deleted successfully',
+                success: true,
+                message: 'Income deleted successfully',
             });
-        } catch (error) {
-            console.error('Error in deleteExpense:', error);
-            next(error); 
+        } catch (err) {
+            next(err); 
         }
     }
 }

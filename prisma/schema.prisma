@@ -11,87 +11,188 @@ datasource db {
 model User {
   user_id       Int       @id @default(autoincrement())
   username      String    @unique @db.VarChar(100)
+  full_name     String?   @db.VarChar(225)
   email         String    @unique @db.VarChar(100)
   password_hash String
   created_at    DateTime? @default(now()) @db.Timestamp(6)
-  full_name     String?   @db.VarChar(225)
 
-  budgets                 Budget[]
-  categories              Categories[] // user-created categories
-  expenses                Expense[]
-  income                  Income[]
+  budget         Budget[]
+  category       Category[]
+  expense        Expense[]
+  income         Income[]
+  account        Account[]
+  transfer       Transfer[]
+  userSettings   UserSetting[]
+  refreshTokens  RefreshToken[]
+  passwordResets PasswordReset[]
 
-  // Forgot password fields
-  reset_code          String?
-  reset_code_expires  DateTime?
-
-
-  @@map("users")
+  @@map("user")
 }
 
 model Expense {
   expense_id  Int       @id @default(autoincrement())
   user_id     Int
+  account_id  Int
+  category_id Int
   amount      Decimal   @db.Decimal(10, 2)
   description String
-  category_id Int
+  currency    String    @default("GHS")
   created_at  DateTime? @default(now()) @db.Timestamp(6)
 
-  user     User        @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-  category Categories? @relation(fields: [category_id], references: [category_id])
+  user     User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  category Category? @relation(fields: [category_id], references: [category_id])
+  account  Account?  @relation(fields: [account_id], references: [account_id])
 
   @@index([user_id])
   @@index([category_id])
-  @@map("expenses")
-}
-
-model Budget {
-  budget_id    Int       @id @default(autoincrement())
-  user_id      Int
-  category_id  Int
-  amount_limit Decimal   @db.Decimal(10, 2)
-  //start_date   DateTime?  @db.Date
-  //end_date     DateTime?  @db.Date
-  created_at   DateTime? @default(now()) @db.Timestamp(6)
-  period       Int?
-
-  user     User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-  category Categories @relation(fields: [category_id], references: [category_id])
-
-  @@index([user_id])
-  @@index([category_id])
-  @@map("budgets")
+  @@map("expense")
 }
 
 model Income {
   income_id   Int      @id @default(autoincrement())
   user_id     Int
+  account_id  Int
+  category_id Int
   amount      Decimal  @db.Decimal(10, 2)
-  source      String   @db.VarChar(50)
-  method      String   @db.VarChar(50)
   description String
+  currency    String   @default("GHS")
   received_at DateTime @default(now()) @db.Timestamp(6)
 
-  users User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  users    User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  account  Account?  @relation(fields: [account_id], references: [account_id])
+  category Category? @relation(fields: [category_id], references: [category_id])
 
   @@index([user_id])
   @@map("income")
 }
 
-model Categories {
-  category_id Int      @id @default(autoincrement())
+model Transfer {
+  transfer_id Int      @id @default(autoincrement())
+  user_id     Int
+  account_id  Int
+  category_id Int
+  amount      Decimal  @db.Decimal(10, 2)
+  description String
+  currency    String   @default("GHS")
+  received_at DateTime @default(now()) @db.Timestamp(6)
+
+  users    User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  account  Account?  @relation(fields: [account_id], references: [account_id])
+  category Category? @relation(fields: [category_id], references: [category_id])
+
+  @@index([user_id])
+  @@map("transfer")
+}
+
+model Budget {
+  budget_id   Int       @id @default(autoincrement())
+  user_id     Int
+  category_id Int
+  amount      Decimal   @db.Decimal(10, 2)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  month       Int
+  year        Int
+
+  user     User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  category Category @relation(fields: [category_id], references: [category_id])
+
+  @@index([user_id])
+  @@index([category_id])
+  @@map("budget")
+}
+
+model Category {
+  category_id Int           @id @default(autoincrement())
   user_id     Int? // NULL = global category
-  name        String   @db.VarChar(100)
-  icon        String?  @db.VarChar(100)
-  created_at  DateTime @default(now()) @db.Timestamp(6)
+  name        String        @db.VarChar(100)
+  icon        String?       @db.VarChar(100)
+  type        CategoryType? // NULL for global, specific type for user-created
+  created_at  DateTime      @default(now()) @db.Timestamp(6)
 
   users User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
-  expenses                Expense[]
-  budgets                 Budget[]
-  
+  expense  Expense[]
+  budget   Budget[]
+  income   Income[]
+  transfer Transfer[]
+
   @@unique([user_id, name]) // prevents duplicate per user or global
   @@index([user_id])
-  @@map("categories")
+  @@map("category")
 }
 
+enum CategoryType {
+  income
+  expense
+  transfer
+}
+
+model Account {
+  account_id Int      @id @default(autoincrement())
+  user_id    Int? // NULL = default account
+  name       String   @db.VarChar(100)
+  icon       String?  @db.VarChar(100)
+  type       AccountType? // NULL for global, specific type for user-created
+  color      String?
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @updatedAt
+
+  user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  expenses Expense[]
+  income   Income[]
+  transfer Transfer[]
+
+  @@unique([user_id, name])
+  @@index([user_id])
+  @@map("account")
+}
+enum AccountType {
+  income
+  expense
+  transfer
+}
+
+model UserSetting {
+  id                   Int      @id @default(autoincrement())
+  user_id              Int
+  darkMode             Boolean  @default(false)
+  insightsEnabled      Boolean  @default(true)
+  notificationsEnabled Boolean  @default(true)
+  appLockEnabled       Boolean  @default(false)
+  currencyCode         String   @default("GHS")
+  currencySymbol       String   @default("₵")
+  currencyName         String   @default("Ghanaian Cedi")
+  country              String   @default("Ghana")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@map("user_setting")
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  user_id   Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime? // Tracks when token was actually used
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  @@map("refresh_token")
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  user_id   Int
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  @@map("password_reset")
+}

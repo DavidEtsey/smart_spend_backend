@@ -3,7 +3,7 @@ const transactionRouter = express.Router();
 const verifyToken = require('../middleware/authMiddleware.js');
 const  transactionController = require('../controllers/transactionController.js');
 
-transactionRouter.get('/daily',verifyToken, transactionController.getDailyTransactions);
+transactionRouter.get('/',verifyToken, transactionController.getDailyTransactions);
 transactionRouter.get('/monthly/:year?/:month?',verifyToken, transactionController.getMonthlyTransactions);
 
 

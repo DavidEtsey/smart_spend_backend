@@ -1,9 +1,12 @@
 const budgetModel = require('../models/budgetModel.js');
 
-
 const budgetController = {
     async createBudget(req, res, next) {
         try {
+            const now = new Date();
+            const month = now.getMonth() + 1; // January = 1, December = 12
+            const year = now.getFullYear();
+
             const { category_id, amount_limit } = req.body;
 
             //Required fields (flexible)
@@ -48,11 +51,13 @@ const budgetController = {
             }
             */
 
-            const budget = await budgetModel.createBudget({
-                user_id: req.user.user_id,
+            const budget = await budgetModel.createBudget(
+                req.user.user_id,
                 category_id,
                 amount_limit,
-            });
+                month,
+                year
+            );
 
             res.status(201).json({
             message: 'Budget created successfully',
