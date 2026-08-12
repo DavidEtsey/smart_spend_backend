@@ -10,9 +10,9 @@ const expenseRouter=require('./src/routes/expenseRouter.js');
 const budgetRouter = require('./src/routes/budgetRouter.js');
 const incomeRouter = require('./src/routes/incomeRouter.js');
 const categoryRouter = require('./src/routes/categoryRouter.js');
-const transactionRouter = require('./src/routes/transactionRouter.js')
 const dashboardRouter = require('./src/routes/dashboardRouter.js');
 const settingsRouter = require('./src/routes/settingsRouter.js');
+const transferRouter = require('./src/routes/transferRouter.js')
 
 const { apiLimiter } = require('./src/middleware/rateLimiter.js');
 
@@ -27,13 +27,13 @@ app.use(logger);
 
 //Routes imported
 app.use('/api/auth/user',authRouter);
-app.use('/api/transactions', transactionRouter);
 app.use('/api/expenses',expenseRouter);
 app.use('/api/budgets', budgetRouter);
 app.use('/api/income', incomeRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/transfer',transferRouter)
 
 // Global error handler (MUST be last middleware)
 app.use((err, req, res, next) => {

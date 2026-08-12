@@ -11,6 +11,5 @@ expenseRouter.get('/read', expenseController.getExpensesByUser);
 expenseRouter.put('/update/:expense_id', expenseController.updateExpense);
 expenseRouter.delete('/delete/:expense_id', expenseController.deleteExpense);
 
-expenseRouter.get('/read_all', getAllExpenses);
 
 module.exports = expenseRouter;

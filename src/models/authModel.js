@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const { sendEmail } =require('../services/sendEmail.js');
 const generateToken = require('../utils/generateToken.js')
 const crypto = require('crypto');
+const AppError = require('../utils/AppError.js');
 
 const prisma = require('./prisma.js');
 
@@ -21,7 +22,7 @@ const authModel = {
         });
 
         if (existingUser) {
-            throw new Error('Username or email already exists');
+            throw new AppError('Username or email already exists', 409);
         }
 
         // Hash password
@@ -63,13 +64,13 @@ const authModel = {
         });
 
         if (!user) {
-            throw new Error('Invalid credentials');
+            throw new AppError('Invalid credentials', 401);
         }
 
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
         if (!isValidPassword) {
-            throw new Error('Invalid Password');
+            throw new AppError('Invalid Password', 401);
         }
 
         const accessToken = generateToken({
@@ -113,7 +114,7 @@ const authModel = {
         });
 
         if (!user) {
-            throw new Error('User not found');
+            throw new AppError('User not found', 404);
         }
 
         return user;
@@ -131,7 +132,7 @@ const authModel = {
         });
 
         if (!user) {
-            throw new Error('User not found');
+            throw new AppError('User not found', 404);
         }
 
         const total_budgets = user.budgets.length;
@@ -171,22 +172,17 @@ const authModel = {
         return user;
     },
 
-    async changePassword(password,newPassword,user_id) {
+    async createNewPassword(newPassword, user_id) {
         // 1. Get user
         const user = await prisma.user.findUnique({ 
             where: { user_id: user_id }, 
-            select:{password_hash: true }
         });
-        if (!user) throw new Error("User not found");
+        if (!user) throw new AppError("User not found", 404);
 
-        // 2. Check current password
-        const isMatch = await bcrypt.compare(password, user.password_hash);
-        if (!isMatch) throw new Error("Current password is incorrect");
-
-        // 3. Hash new password
+        // Hash new password
         const newHash = await bcrypt.hash(newPassword, 10);
 
-        // 4. Update password
+        // Update password s
         await prisma.user.update({
             where: { user_id: user_id },
             data: { password_hash: newHash },
@@ -238,7 +234,7 @@ const authModel = {
         });
 
         if (!user) {
-            throw new Error("Invalid or expired code");
+            throw new AppError("Invalid or expired code", 400);
         }
 
         // Find valid password reset record
@@ -254,13 +250,13 @@ const authModel = {
         });
 
         if (!passwordReset) {
-            throw new Error("Invalid or expired code");
+            throw new AppError("Invalid or expired code", 400);
         }
 
         // Check token match
         const isValidToken = await bcrypt.compare(reset_code, passwordReset.tokenHash);
         if (!isValidToken) {
-            throw new Error("Invalid code");
+            throw new AppError("Invalid code", 400);
         }
 
         // Hash new password
@@ -282,7 +278,7 @@ const authModel = {
 
     ,
     async refreshToken(presentedToken) {
-        if (!presentedToken) throw new Error('No refresh token provided');
+        if (!presentedToken) throw new AppError('No refresh token provided', 400);
 
         // Find active refresh tokens (not revoked, not expired)
         const tokens = await prisma.refreshToken.findMany({
@@ -302,7 +298,7 @@ const authModel = {
             }
         }
 
-        if (!match) throw new Error('Invalid or expired refresh token');
+        if (!match) throw new AppError('Invalid or expired refresh token', 401);
 
         // Issue new access token
         const accessToken = generateToken({ user_id: match.user_id });

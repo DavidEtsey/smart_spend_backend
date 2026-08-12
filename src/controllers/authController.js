@@ -141,22 +141,26 @@ const authController = {
         }
     },
 
-    async changePassword(req,res,next){
+    async createNewPassword(req,res,next){
         try {
-            const {password,newPassword}=req.body;
+            const {newPassword,confirmPassword} = req.body;
             const {user_id} = req.user; 
 
-            const results=await authModel.changePassword(password,newPassword,user_id);
+            if (newPassword !== confirmPassword) {
+                return res.status(400).json({ error: 'Passwords do not match' });
+            }
+
+            const results=await authModel.createNewPassword(newPassword, user_id);
 
             if (!results) {
-                return res.status(404).json({ message: 'Password not change' });
+                return res.status(404).json({ message: 'Password not changed' });
             }
 
             res.json({
                 message: 'Password changed successfully',
             })
         } catch (error) {
-            console.error('Error in changePassword:', error);
+            console.error('Error in createNewPassword:', error);
             next(error);
         }
     },

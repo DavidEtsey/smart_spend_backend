@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const AppError = require('../utils/AppError.js');
 
 //EMAIL FOR RESET PASSWORD
 const sendEmail = async (to, subject, resetToken) => {
@@ -91,13 +92,13 @@ const sendEmail = async (to, subject, resetToken) => {
     console.log('Email sent:', info.response);
   } catch (error) {
     console.error('Email error:', error);
-    throw new Error('Email could not be sent');
+    throw new AppError('Email could not be sent', 502);
   }
 };
 
 
 //EMAIL FOR REPORT
-const sendReportEmail = async(email,period,filePath)=>{
+const sendReportEmail = async(email,label,filePath)=>{
   try{
     const transporter =nodemailer.createTransport({
       service:"gmail",
@@ -110,20 +111,39 @@ const sendReportEmail = async(email,period,filePath)=>{
     await transporter.sendMail({
       from:`"SmartSpend" <${process.env.EMAIL_USER}>`,
       to:email,
-      subject:`SmartSpend ${period} Excel Report`,
+      subject:`SmartSpend ${label} Excel Report`,
 
-      html:`
-      <h3>SmartSpend Report</h3>
-      <p>
-      Your transaction report for 
-      ${period} is attached.
-      </p>
+      html: `
+      <div style="font-family: Arial, Helvetica, sans-serif; background:#f4f6f9; padding:30px;">
+        <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.06);">
+          <div style="padding:24px;background:#ffffff;text-align:left;border-bottom:1px solid #e6e9ee;">
+            <h1 style="margin:0;font-size:22px;">
+              <span style="color:#22c55e;font-weight:700;">Smart</span><span style="color:#facc15;font-weight:700;">Spend</span>
+            </h1>
+            <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">Your requested transaction report</p>
+          </div>
+          <div style="padding:24px;color:#333;">
+            <p style="margin-top:0;">Hello,</p>
+            <p style="line-height:1.5;">
+              Please find attached your <strong>${label}</strong> transaction report from SmartSpend.
+            </p>
+            <p style="line-height:1.5;">
+              File: <strong>SmartSpend-${label}.xlsx</strong>
+            </p>
+            <hr style="border:none;border-top:1px solid #eef2f7;margin:20px 0;">
+            <p style="font-size:12px;color:#9aa4b2;margin:0;">
+              SmartSpend Team<br>
+              © ${new Date().getFullYear()} SmartSpend. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
       `,
 
       attachments:[
         {
           filename:
-          `SmartSpend-${period}.xlsx`,
+          `SmartSpend-${label}.xlsx`,
           path:filePath
         }
       ]
@@ -131,7 +151,7 @@ const sendReportEmail = async(email,period,filePath)=>{
 
   }catch (error) {
     console.error('Email error:', error);
-    throw new Error('Email could not be sent');
+    throw new AppError('Email could not be sent', 502);
   }
 };
 

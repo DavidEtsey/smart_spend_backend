@@ -148,29 +148,6 @@ const expenseController = {
         } catch (error) {
             next(error);
         }
-    },
-
-    async getAllExpenses(req, res, next) {
-        try {
-            const expenses = await expenseModel.getAllExpenses();
-
-            if (!expenses || expenses.length === 0) {
-                return res.json({
-                    success: true,
-                    total: 0,
-                    message: "No expenses found",
-                    data: []
-                });
-            }
-
-            res.json({
-                success: true,
-                total: expenses.length,
-                data: expenses
-            });
-        } catch (error) {
-            next(error);
-        }
     }
 }
 

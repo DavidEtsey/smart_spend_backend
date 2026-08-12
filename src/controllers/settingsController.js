@@ -6,23 +6,32 @@ const settingsController = {
     async exportExcel(req, res,next) {
         try {
             const { user_id } = req.user;
-            const { period,startDate, endDate,recipientEmail } = req.body;
+            const {period} = req.body;
+            const validPeriods = [
+                "THIS_MONTH",
+                "LAST_MONTH",
+                "THIS_YEAR",
+                "LAST_YEAR",
+                "ALL_TRANSACTIONS"
+            ];
 
-            if (!startDate || !endDate || !recipientEmail) {
-                return res.status(400).json({
-                    success:false,
-                    message:"Missing required fields"
-                });
+            if (!validPeriods.includes(period)) {
+                throw new AppError("Invalid period", 400);
             }
 
-            const result = await reportService.generateReport(user_id,period,startDate,endDate,recipientEmail);
+            const result = await reportService.generateExcel(user_id, period);
 
             return res.status(200).json({
                 success:true,
-                message:"Excel report sent successfully"
+                message:"Excel report sent successfully.Check mail for report"
             })
         } catch (error) {
-            next(error);
+            console.error("Export transaction error:", error);
+
+            return res.status(500).json({
+                success: false,
+                message: "Failed to export transactions"
+            });
         }
     }
 }

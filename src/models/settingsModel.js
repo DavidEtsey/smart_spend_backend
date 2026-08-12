@@ -1,25 +1,26 @@
 const prisma = require("./prisma");
+const { getDateRange } = require("../services/dateRangeService");
 
-exports.getTransactionsByDate = async (user_id, startDate, endDate) => {
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    // Include the entire end date
-    end.setHours(23, 59, 59, 999);
+exports.getTransactionsByDate = async (user_id, period) => {
+    const { startDate, endDate } = getDateRange(period);
 
     const [incomeData, expenseData] = await Promise.all([
         prisma.income.findMany({
             where: {
                 user_id,
                 received_at: {
-                    gte: start,
-                    lte: end
+                    gte: startDate,
+                    lte: endDate
                 }
             },
             include: {
                 category: true,
-                account: true
+                account: true,
+                user: {
+                    select: {
+                        email: true,
+                    }
+                }
             },
             orderBy: {
                 received_at: "asc"
@@ -29,13 +30,18 @@ exports.getTransactionsByDate = async (user_id, startDate, endDate) => {
             where: {
                 user_id,
                 created_at: {
-                    gte: start,
-                    lte: end
+                    gte: startDate,
+                    lte: endDate
                 }
             },
             include: {
                 category: true,
-                account: true
+                account: true,
+                user: {
+                    select: {
+                        email: true,
+                    }
+                }
             },
             orderBy: {
                 created_at: "asc"
@@ -52,7 +58,8 @@ exports.getTransactionsByDate = async (user_id, startDate, endDate) => {
             date: item.received_at,
             category: item.category ? item.category.name : null,
             account: item.account ? item.account.name : null,
-            currency: item.currency
+            currency: item.currency,
+            email: item.user.email,
         })),
         ...expenseData.map((item) => ({
             transaction_id: item.expense_id,
@@ -62,7 +69,8 @@ exports.getTransactionsByDate = async (user_id, startDate, endDate) => {
             date: item.created_at,
             category: item.category ? item.category.name : null,
             account: item.account ? item.account.name : null,
-            currency: item.currency
+            currency: item.currency,
+            email: item.user.email
         }))
     ].sort((a, b) => new Date(a.date) - new Date(b.date));
 

@@ -1,4 +1,5 @@
 const { body, validationResult } = require('express-validator');
+const AppError = require('../utils/AppError.js');
 
 // Sign Up Validation
 const registerValidation = [
@@ -42,7 +43,7 @@ const logInValidation = [
       const isUsername = /^[a-zA-Z0-9_]{3,20}$/.test(value);
 
       if (!isEmail && !isUsername) {
-        throw new Error('Must be a valid username or email');
+        throw new AppError('Must be a valid username or email', 400);
       }
 
       return true;

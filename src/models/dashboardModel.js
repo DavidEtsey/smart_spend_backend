@@ -34,6 +34,8 @@ const transactionDashboard = async (user_id, month, year) => {
         gte: startDate,
         lt: endDate
       }
+    },include: {
+      category: {select: { icon: true,name:true }}
     }
   });
 
@@ -47,8 +49,8 @@ const transactionDashboard = async (user_id, month, year) => {
       }
     },
     include: {
-      category: true
-    }
+        category: {select: { icon: true,name:true }}
+      }
   });
 
   const today = new Date();
@@ -62,8 +64,11 @@ const transactionDashboard = async (user_id, month, year) => {
         type: "income",
         title: i.source,
         amount: i.amount,
+        icon: i.category?.icon,
+        category: i.category?.name,
+        account: i.account,
         description: i.description,
-        date: receivedAt.toISOString(),
+        time: receivedAt.toISOString().split("T")[0],
         displayDate: receivedAt.toDateString() === todayString ? "Today" : receivedAt.toDateString(),
         sortDate: receivedAt
       };
@@ -74,8 +79,11 @@ const transactionDashboard = async (user_id, month, year) => {
         type: "expense",
         title: e.category?.name,
         amount: e.amount,
+        icon: e.category?.icon,
+        category: e.category?.name,
+        account: e.account,
         description: e.description,
-        date: createdAt.toISOString(),
+        time: createdAt.toISOString().split("T")[0],
         displayDate: createdAt.toDateString() === todayString ? "Today" : createdAt.toDateString(),
         sortDate: createdAt
       };
@@ -126,7 +134,7 @@ const getPieChart = async (user_id) => {
   );
   const categoryIds = expenses.map((item) => item.category_id);
 
-  const categories = await prisma.categories.findMany({
+  const categories = await prisma.category.findMany({
     where: {
       category_id: {
         in: categoryIds
@@ -208,11 +216,11 @@ const getBarChart = async (user_id) => {
 
 const getCategoryStats = async (user_id) => {
   // Get all categories
-  const categories = await prisma.categories.findMany({
+  const categories = await prisma.category.findMany({
     where: {
       OR: [
         { user_id: null },       // Global categories
-        { user_id }      // User categories
+        { user_id }              // User categories
       ]
     },
     orderBy: {
@@ -223,7 +231,6 @@ const getCategoryStats = async (user_id) => {
   const results = [];
 
   for (const category of categories) {
-
     // Expenses belonging to this category
     const expenses = await prisma.expense.findMany({
       where: {
@@ -241,7 +248,7 @@ const getCategoryStats = async (user_id) => {
     const incomes = await prisma.income.findMany({
       where: {
         user_id,
-        source: category.name
+        category_id: category.category_id
       }
     });
 
