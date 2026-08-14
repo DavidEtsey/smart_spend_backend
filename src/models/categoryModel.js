@@ -1,23 +1,28 @@
 const prisma = require('./prisma.js');
 
-const customizeCategory = async (customData, user_id) => {
-
-    const { name, icon, type, user_id: categoryUser_id } = customData;
-
-    const categoryData = await prisma.category.create({
-        data: {
-            name,
-            icon,
-            type,
-            user_id: categoryUser_id,
-            users: categoryUser_id ? {
-                connect: { user_id: categoryUser_id }
-            } : undefined
+const getCategories =async (user_id,type) => {
+    const category= await prisma.category.findMany({
+       where:{
+            OR: [
+                { user_id: null }, // System categories
+                { user_id: user_id } // User's custom categories
+            ],
+            type: type
         }
     });
-    
-    return categoryData;
 
+    return category;
 }
 
-module.exports = { customizeCategory };
+const customizeCategory = async (user_id, type,name) => {
+    const newCategory = await prisma.category.create({
+        data: {
+            user_id,
+            type,
+            name
+        }
+    });
+    return newCategory;
+}
+
+module.exports = { customizeCategory,getCategories };

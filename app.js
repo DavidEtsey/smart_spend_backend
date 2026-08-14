@@ -10,6 +10,7 @@ const expenseRouter=require('./src/routes/expenseRouter.js');
 const budgetRouter = require('./src/routes/budgetRouter.js');
 const incomeRouter = require('./src/routes/incomeRouter.js');
 const categoryRouter = require('./src/routes/categoryRouter.js');
+const accountRouter = require('./src/routes/accountRouter.js');
 const dashboardRouter = require('./src/routes/dashboardRouter.js');
 const settingsRouter = require('./src/routes/settingsRouter.js');
 const transferRouter = require('./src/routes/transferRouter.js')
@@ -31,6 +32,7 @@ app.use('/api/expenses',expenseRouter);
 app.use('/api/budgets', budgetRouter);
 app.use('/api/income', incomeRouter);
 app.use('/api/category', categoryRouter);
+app.use('/api/account', accountRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/transfer',transferRouter)

@@ -1,8 +1,8 @@
-const categoryModel = require('../models/categoryModel.js');
+const accountModel = require('../models/accountModel.js');
 const AppError = require('../utils/AppError.js');
 
-const categoryController = {
-    getCategories: async(req,res,next)=> {
+const accountController = {
+    getAccounts: async(req,res,next)=> {
         try{
             const { user_id } = req.user;
             const { type } = req.query;
@@ -11,23 +11,23 @@ const categoryController = {
             if (type && !validTypes.includes(type.toLowerCase())) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid category type. Must be expense, income, or transfer."
+                message: "Invalid account type. Must be expense, income, or transfer."
             });
             }
             
-            const categories = await categoryModel.getCategories(user_id,type);
+            const accounts = await accountModel.getAccounts(user_id,type);
 
             res.status(200).json({
                 success: true,
-                message: 'Custom categories retrieved successfully',
-                data: categories
+                message: 'Custom accounts retrieved successfully',
+                data: accounts
             });
         }catch (err) {
             next(err);
         }
     },
 
-    customizeCategory: async (req, res, next) => {
+    customizeAccount: async (req, res, next) => {
         try {
             const { user_id } = req.user;
             const { type } = req.query; // Get the type from query parameters
@@ -39,11 +39,11 @@ const categoryController = {
                 throw new AppError("Invalid type. Must be 'income', 'expense', or 'transfer'", 400);
             }
             
-            const data = await categoryModel.customizeCategory(user_id, type,name);
+            const data = await accountModel.customizeAccount(user_id, type,name);
 
             res.status(200).json({
                 success: true,
-                message: 'Custom category created successfully',
+                message: 'Custom account created successfully',
                 data
             });
         } catch (err) {
@@ -52,4 +52,4 @@ const categoryController = {
     }
 };
 
-module.exports = categoryController; 
+module.exports = accountController; 
