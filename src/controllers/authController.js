@@ -20,9 +20,9 @@ const authController = {
 
     async login(req, res, next) {
         try {
-            const { identifier, password } = req.body;
+            const { email, password } = req.body;
             
-            const result = await authModel.signIn({ identifier, password });
+            const result = await authModel.signIn(email, password);
             res.status(200).json({
                 message: 'Login successful',
                 ...result
@@ -181,9 +181,9 @@ const authController = {
 
     async resetPassword(req,res,next){
         try {
-            const { email, reset_code, new_password } = req.body;
+            const { email, reset_code} = req.body;
 
-            await authModel.resetPassword(email, reset_code, new_password);
+            await authModel.resetPassword(email, reset_code);
 
             res.json({ message: "Password reset successfully." });
 

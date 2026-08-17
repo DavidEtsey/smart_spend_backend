@@ -10,7 +10,7 @@ datasource db {
 
 model User {
   user_id       Int       @id @default(autoincrement())
-  username      String    @unique @db.VarChar(100)
+  username      String?    @unique @db.VarChar(100)
   full_name     String?   @db.VarChar(225)
   email         String    @unique @db.VarChar(100)
   password_hash String
@@ -23,7 +23,6 @@ model User {
   account        Account[]
   transfer       Transfer[]
   userSettings   UserSetting[]
-  refreshTokens  RefreshToken[]
   passwordResets PasswordReset[]
 
   @@map("user")
@@ -107,6 +106,7 @@ model Category {
   name        String        @db.VarChar(100)
   icon        String?       @db.VarChar(100)
   type        CategoryType? // NULL for global, specific type for user-created
+  color      String?
   created_at  DateTime      @default(now()) @db.Timestamp(6)
 
   users User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
@@ -132,7 +132,6 @@ model Account {
   user_id    Int? // NULL = default account
   name       String   @db.VarChar(100)
   icon       String?  @db.VarChar(100)
-  type       AccountType? // NULL for global, specific type for user-created
   color      String?
   created_at DateTime @default(now()) @db.Timestamp(6)
   updated_at DateTime? @updatedAt
@@ -146,11 +145,6 @@ model Account {
   @@unique([user_id, name])
   @@index([user_id])
   @@map("account")
-}
-enum AccountType {
-  income
-  expense
-  transfer
 }
 
 model UserSetting {
@@ -170,19 +164,6 @@ model UserSetting {
   user User? @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@map("user_setting")
-}
-
-model RefreshToken {
-  id        Int       @id @default(autoincrement())
-  user_id   Int
-  tokenHash String    @unique
-  expiresAt DateTime
-  usedAt    DateTime? // Tracks when token was actually used
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  @@map("refresh_token")
 }
 
 model PasswordReset {

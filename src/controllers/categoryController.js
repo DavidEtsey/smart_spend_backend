@@ -19,7 +19,7 @@ const categoryController = {
 
             res.status(200).json({
                 success: true,
-                message: 'Custom categories retrieved successfully',
+                message: 'All categories retrieved successfully',
                 data: categories
             });
         }catch (err) {

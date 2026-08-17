@@ -8,6 +8,12 @@ const getCategories =async (user_id,type) => {
                 { user_id: user_id } // User's custom categories
             ],
             type: type
+        },
+        select: {
+            category_id: true,
+            name: true,
+            type: true,
+            icon: true
         }
     });
 

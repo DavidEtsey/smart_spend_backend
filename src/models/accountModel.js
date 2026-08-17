@@ -6,8 +6,13 @@ const getAccounts =async (user_id,type) => {
             OR: [
                 { user_id: null }, // System accounts
                 { user_id: user_id } // User's custom accounts
-            ],
-            type: type
+            ]
+        },
+        select: {
+            account_id: true,
+            name: true,
+            icon: true,
+            color: true,
         }
     });
 

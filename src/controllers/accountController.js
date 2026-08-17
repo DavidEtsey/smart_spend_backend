@@ -5,17 +5,7 @@ const accountController = {
     getAccounts: async(req,res,next)=> {
         try{
             const { user_id } = req.user;
-            const { type } = req.query;
-            const validTypes = ["expense", "income", "transfer"];
-
-            if (type && !validTypes.includes(type.toLowerCase())) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid account type. Must be expense, income, or transfer."
-            });
-            }
-            
-            const accounts = await accountModel.getAccounts(user_id,type);
+            const accounts = await accountModel.getAccounts(user_id);
 
             res.status(200).json({
                 success: true,

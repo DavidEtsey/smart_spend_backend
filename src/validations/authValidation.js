@@ -4,15 +4,6 @@ const AppError = require('../utils/AppError.js');
 // Sign Up Validation
 const registerValidation = [
 
-  body('username')
-    .trim()
-    .notEmpty()
-    .withMessage('Username is required')
-    .isLength({ min: 3, max: 20 })
-    .withMessage('Username must be between 3 and 20 characters')
-    .matches(/^[a-zA-Z0-9_]+$/)
-    .withMessage('Username can only contain letters, numbers, and underscores'),
-
   body('full_name')
     .trim()
     .notEmpty()
@@ -34,16 +25,15 @@ const registerValidation = [
 
 // Sign In Validation
 const logInValidation = [
-  body('identifier')
+  body('email')
     .trim()
     .notEmpty()
-    .withMessage('Username or email is required')
+    .withMessage('Email is required')
     .custom((value) => {
       const isEmail = /\S+@\S+\.\S+/.test(value);
-      const isUsername = /^[a-zA-Z0-9_]{3,20}$/.test(value);
 
-      if (!isEmail && !isUsername) {
-        throw new AppError('Must be a valid username or email', 400);
+      if (!isEmail ) {
+        throw new AppError('Must be a valid email', 400);
       }
 
       return true;

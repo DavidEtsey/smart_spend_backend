@@ -7,18 +7,12 @@ const AppError = require('../utils/AppError.js');
 const prisma = require('./prisma.js');
 
 const authModel = {
-
     async signUp(userData) {
-        const { username, full_name, email, password } = userData;
+        const { full_name, email, password } = userData;
 
         // Check if user exists
         const existingUser = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { username },
-                    { email }
-                ]
-            }
+            where: { email }
         });
 
         if (existingUser) {
@@ -31,14 +25,12 @@ const authModel = {
         // Create user
         const user = await prisma.user.create({
             data: {
-                username,
                 email,
-                password_hash: passwordHash,
                 full_name,
+                password_hash: passwordHash
             },
             select: {
                 user_id: true,
-                username: true,
                 email: true
             }
         });
@@ -46,19 +38,11 @@ const authModel = {
         return user;
     },
 
-    async signIn(credentials) {
-        const { identifier, password } = credentials;
-
+    async signIn(email, password) {
         const user = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { username: identifier },
-                    { email: identifier }
-                ]
-            },
+            where: { email },
             select: {
                 user_id: true,
-                username: true,
                 password_hash: true
             }
         });
@@ -77,22 +61,8 @@ const authModel = {
             user_id: user.user_id,
         });
 
-        // Create refresh token and store its hash
-        const refreshToken = crypto.randomBytes(48).toString('hex');
-        const tokenHash = await bcrypt.hash(refreshToken, 10);
-        const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); // 7 days
-
-        await prisma.refreshToken.create({
-            data: {
-                user_id: user.user_id,
-                tokenHash,
-                expiresAt,
-            }
-        });
-
         return {
             token: accessToken,
-            refreshToken,
             user: {
                 user_id: user.user_id,
                 username: user.username
@@ -227,7 +197,7 @@ const authModel = {
         
     },
 
-    async resetPassword(email, reset_code, new_password) {
+    async resetPassword(email, reset_code) {
 
         const user = await prisma.user.findUnique({
             where: { email },
