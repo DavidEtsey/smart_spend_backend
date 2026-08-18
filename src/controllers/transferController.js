@@ -1,10 +1,11 @@
-const transferModel = require('../models/transferModel.js');
+const {createTransfer} = require('../models/transferModel.js');
 const AppError = require('../utils/AppError.js');
 
 const transferController = {
     async createTransfer(req, res, next) {
         try{
             const { from_account_id, to_account_id, amount, description } = req.body;
+            const {user_id}=req.user;
 
             // Validate required fields
             if (!amount || !from_account_id || !to_account_id || !description) {
@@ -30,7 +31,7 @@ const transferController = {
                 throw new AppError("Invalid to_account_id", 400);
             }
 
-            const transfer = await transferModel.createTransfer( from_account_id, to_account_id, amount, description);
+            const transfer = await createTransfer( user_id,from_account_id, to_account_id, amount, description);
             res.status(201).json(transfer);
         }catch(error){
             next(error);

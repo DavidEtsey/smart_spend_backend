@@ -16,14 +16,14 @@ const checkBudgetAndGenerateAlert = async ({user_id, category_id, created_at}) =
 
   // Get all expenses in this budget range
   const expenses = await prisma.expense.aggregate({
+    _sum: { amount: true },
     where: {
       user_id
-    },
-    select: { amount: true }
+    }
   });
 
   // Calculate total spent
-  const spent = Number(result._sum.amount || 0);
+  const spent = Number(expenses._sum.amount || 0);
 
   // Compute percentage
   const percentage = budget.amount_limit > 0 ? (spent / budget.amount_limit) * 100 : 0;

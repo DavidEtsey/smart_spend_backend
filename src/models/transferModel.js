@@ -1,14 +1,15 @@
 const prisma = require('./prisma.js');
 
-const createTransfer = async (from_account_id, to_account_id, amount, description) => {
+const createTransfer = async (user_id,from_account_id, to_account_id, amount, description) => {
   const transferData = await prisma.transfer.create({
     data: {
+      user_id,
       from_account_id,
       to_account_id,
       amount,
       description,
     }
   });
-  return { ...transferData};
+  return {...transferData};
 };
-module.exports = createTransfer;
+module.exports = {createTransfer};

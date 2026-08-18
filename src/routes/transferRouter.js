@@ -3,8 +3,6 @@ const transferRouter = express.Router();
 const verifyToken = require('../middleware/authMiddleware.js');
 const  transferController = require('../controllers/transferController.js');
 
-transferRouter.use(verifyToken);
-
-transferRouter.post('/add', transferController.createTransfer);
+transferRouter.post('/add',verifyToken, transferController.createTransfer);
 
 module.exports = transferRouter;

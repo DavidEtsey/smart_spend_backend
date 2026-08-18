@@ -68,17 +68,16 @@ model Income {
 model Transfer {
   transfer_id Int      @id @default(autoincrement())
   user_id     Int
-  account_id  Int
-  category_id Int
+  from_account_id  Int
+  to_account_id    Int
   amount      Decimal  @db.Decimal(10, 2)
   description String
   currency    String   @default("GHS")
   received_at DateTime @default(now()) @db.Timestamp(6)
 
   users    User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-  account  Account?  @relation(fields: [account_id], references: [account_id])
-  category Category? @relation(fields: [category_id], references: [category_id])
-
+  fromAccount Account @relation("transferFrom",fields: [from_account_id],references: [account_id])
+  toAccount Account @relation("transferTo",fields: [to_account_id],references: [account_id])
   @@index([user_id])
   @@map("transfer")
 }
@@ -114,7 +113,6 @@ model Category {
   expense  Expense[]
   budget   Budget[]
   income   Income[]
-  transfer Transfer[]
 
   @@unique([user_id, name]) // prevents duplicate per user or global
   @@index([user_id])
@@ -140,7 +138,8 @@ model Account {
 
   expenses Expense[]
   income   Income[]
-  transfer Transfer[]
+  transfersFrom Transfer[] @relation("transferFrom")
+  transfersTo   Transfer[] @relation("transferTo")
 
   @@unique([user_id, name])
   @@index([user_id])

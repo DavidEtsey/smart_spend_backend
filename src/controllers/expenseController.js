@@ -32,15 +32,16 @@ const expenseController = {
 
             // Use GHS as default currency if not provided
             const finalCurrency = currency || "GHS";
-
-            const expense = await expenseModel.createExpense({
-                user_id: req.user.user_id,
-                amount: Number(amount),
-                category_id: parseInt(category_id),
-                account_id: parseInt(account_id),
+            
+            const {user_id} = req.user
+            const expense = await expenseModel.createExpense(
+                user_id,
+                Number(amount),
+                parseInt(category_id),
+                parseInt(account_id),
                 description,
-                currency: finalCurrency
-            });
+                finalCurrency
+            );
 
             if (!expense) {
                 throw new AppError("Failed to create expense record", 500);

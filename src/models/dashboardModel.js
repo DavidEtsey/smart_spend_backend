@@ -53,6 +53,22 @@ const transactionDashboard = async (user_id, month, year) => {
       }
   });
 
+  /*
+  //Get Transfers
+  const transfers = await prisma.transfer.findMany({
+    where: {
+      user_id,
+      received_at: {
+        gte: startDate,
+        lt: endDate
+      }
+    },
+    include: {
+        category: {select: { icon: true,name:true }}
+      }
+  });
+  */
+
   const today = new Date();
   const todayString = today.toDateString();
 
@@ -87,7 +103,15 @@ const transactionDashboard = async (user_id, month, year) => {
         displayDate: createdAt.toDateString() === todayString ? "Today" : createdAt.toDateString(),
         sortDate: createdAt
       };
-    })
+    }),
+    /*
+    ...transfers.map((t)=>{
+      const receivedAt = new Date(i.received_at);
+      return{
+        type:"transfer",
+        titlr
+      }
+    })*/
   ];
 
   // Sort latest first
