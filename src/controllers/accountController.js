@@ -20,16 +20,9 @@ const accountController = {
     customizeAccount: async (req, res, next) => {
         try {
             const { user_id } = req.user;
-            const { type } = req.query; // Get the type from query parameters
             const {name} = req.body;
-            const validTypes = ["income", "expense", "transfer"];
-
-            // Validate type if provided
-            if (type && !validTypes.includes(type.toLowerCase())) {
-                throw new AppError("Invalid type. Must be 'income', 'expense', or 'transfer'", 400);
-            }
             
-            const data = await accountModel.customizeAccount(user_id, type,name);
+            const data = await accountModel.customizeAccount(user_id, name);
 
             res.status(200).json({
                 success: true,

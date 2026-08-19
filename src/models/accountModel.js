@@ -19,11 +19,10 @@ const getAccounts =async (user_id,type) => {
     return accounts;
 }
 
-const customizeAccount = async (user_id, type,name) => {
+const customizeAccount = async (user_id, name) => {
     const newAccount = await prisma.account.create({
         data: {
             user_id,
-            type,
             name
         }
     });
